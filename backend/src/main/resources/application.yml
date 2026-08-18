@@ -1,0 +1,65 @@
+spring:
+  application:
+    name: drugstore
+  datasource:
+    url: jdbc:mysql://localhost:3306/pharmacy
+    username: root
+    password: admin
+    hikari:
+      auto-commit: false
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+
+server:
+  port: 8082
+
+info:
+  app:
+    name: Medicine Drugstore
+    description: Pharmacy e-commerce API
+    version: 1.0.0
+
+management:
+  endpoints:
+    web:
+      base-path: /actuator
+      exposure:
+        # Required by alert-support-dashboard remote APM scraper
+        include: health,info,metrics,threaddump,loggers
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true
+      group:
+        liveness:
+          include: livenessState
+        readiness:
+          include: readinessState,db
+  info:
+    env:
+      enabled: true
+    java:
+      enabled: true
+    os:
+      enabled: true
+  health:
+    db:
+      enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+
+app:
+  jwt:
+    secret: MedicineDrugstoreJwtSecretKeyMustBeAtLeast256BitsLongForHS256Algo
+    expiration-ms: 86400000
