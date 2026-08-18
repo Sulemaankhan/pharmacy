@@ -3,7 +3,6 @@ package com.pharmacy.drugstore.export;
 import com.lowagie.text.Document;
 import com.lowagie.text.Element;
 import com.lowagie.text.Font;
-import com.lowagie.text.FontFactory;
 import com.lowagie.text.PageSize;
 import com.lowagie.text.Paragraph;
 import com.lowagie.text.Phrase;
@@ -38,14 +37,14 @@ public class PdfOrderHistoryExporter extends AbstractOrderHistoryExporter {
             PdfWriter.getInstance(document, out);
             document.open();
 
-            Font titleFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 18, BLUE);
-            Font metaFont = FontFactory.getFont(FontFactory.HELVETICA, 10, MUTED);
-            Font headFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 9, BLUE);
-            Font cellFont = FontFactory.getFont(FontFactory.HELVETICA, 8, Color.DARK_GRAY);
-            Font boldFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 9, Color.DARK_GRAY);
+            Font titleFont = new Font(Font.HELVETICA, 18, Font.BOLD, BLUE);
+            Font metaFont = new Font(Font.HELVETICA, 10, Font.NORMAL, MUTED);
+            Font headFont = new Font(Font.HELVETICA, 9, Font.BOLD, BLUE);
+            Font cellFont = new Font(Font.HELVETICA, 8, Font.NORMAL, Color.DARK_GRAY);
+            Font boldFont = new Font(Font.HELVETICA, 9, Font.BOLD, Color.DARK_GRAY);
 
             document.add(new Paragraph("Medicine Drugstore", titleFont));
-            document.add(new Paragraph("Order history", FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12, Color.DARK_GRAY)));
+            document.add(new Paragraph("Order history", new Font(Font.HELVETICA, 12, Font.BOLD, Color.DARK_GRAY)));
             document.add(new Paragraph(
                     "Customer: " + user.getName() + "  |  " + user.getEmail()
                             + "  |  Generated: " + DATE_TIME.format(Instant.now())
@@ -89,7 +88,7 @@ public class PdfOrderHistoryExporter extends AbstractOrderHistoryExporter {
 
             if (!orders.isEmpty()) {
                 document.add(new Paragraph(" "));
-                document.add(new Paragraph("Line items", FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12, Color.DARK_GRAY)));
+                document.add(new Paragraph("Line items", new Font(Font.HELVETICA, 12, Font.BOLD, Color.DARK_GRAY)));
                 document.add(new Paragraph(" "));
                 PdfPTable items = new PdfPTable(new float[]{2.2f, 4.5f, 1.2f, 1.5f, 1.6f});
                 items.setWidthPercentage(100);

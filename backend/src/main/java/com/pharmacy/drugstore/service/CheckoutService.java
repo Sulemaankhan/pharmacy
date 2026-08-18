@@ -129,7 +129,7 @@ public class CheckoutService {
             order.setStatus(PaymentStatus.FAILED);
             transactions.saveAndFlush(txn);
             orders.saveAndFlush(order);
-            afterCommit(() -> notifications.create(NotificationKind.PAYMENT_FAILURE).send(user, order, txn));
+            queueNotification(NotificationKind.PAYMENT_FAILURE, user, order, txn);
             return toResponse(false, order, txn, outcome.message(), "QUEUED");
         }
 
@@ -149,7 +149,7 @@ public class CheckoutService {
         transactions.saveAndFlush(txn);
         orders.saveAndFlush(order);
 
-        afterCommit(() -> notifications.create(NotificationKind.PAYMENT_SUCCESS).send(user, order, txn));
+        queueNotification(NotificationKind.PAYMENT_SUCCESS, user, order, txn);
         return toResponse(true, order, txn, "Payment posted to ledger. Confirmation will be emailed to " + user.getEmail(),
                 "QUEUED");
     }
@@ -173,11 +173,11 @@ public class CheckoutService {
         return products.lockAllById(ids).stream().collect(Collectors.toMap(Product::getId, Function.identity()));
     }
 
-    private void afterCommit(Runnable task) {
+    private void queueNotification(NotificationKind kind, User user, CustomerOrder order, PaymentTransaction txn) {
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
-                task.run();
+                notifications.create(kind).send(user, order, txn);
             }
         });
     }

@@ -44,7 +44,7 @@ public class PaymentController {
         return checkoutService.history(user(auth));
     }
 
-    @GetMapping("/orders/{orderNumber:^(?!export$).+}")
+    @GetMapping("/orders/{orderNumber}")
     public CustomerOrder order(Authentication auth, @PathVariable String orderNumber) {
         return checkoutService.get(user(auth), orderNumber);
     }
