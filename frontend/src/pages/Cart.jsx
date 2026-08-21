@@ -33,10 +33,10 @@ export default function Cart() {
           <div className="panel wide">
             {cart.map((item) => (
               <div className="cart-row" key={item.id}>
-                <img src={item.product.imageUrl} alt="" />
+                <img src={item.product?.imageUrl} alt="" />
                 <div>
-                  <b>{item.product.name}</b>
-                  <div className="muted">{formatMoney(item.product.price)}</div>
+                  <b>{item.product?.name}</b>
+                  <div className="muted">{formatMoney(item.product?.price)}</div>
                 </div>
                 <div className="qty">
                   <button onClick={() => updateCart(item.id, item.quantity - 1)}>-</button>

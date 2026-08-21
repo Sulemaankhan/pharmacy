@@ -6,6 +6,8 @@ import com.pharmacy.drugstore.entity.PaymentTransaction;
 import com.pharmacy.drugstore.payment.PaymentMode;
 import com.pharmacy.drugstore.repository.LedgerAccountRepository;
 import com.pharmacy.drugstore.repository.LedgerEntryRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -13,6 +15,7 @@ import java.math.BigDecimal;
 
 @Service
 public class LedgerPostingService {
+    private static final Logger log = LoggerFactory.getLogger(LedgerPostingService.class);
     private final LedgerAccountRepository accounts;
     private final LedgerEntryRepository entries;
 
@@ -41,6 +44,8 @@ public class LedgerPostingService {
         accounts.save(debit);
         accounts.save(credit);
         txn.setLedgerPosted(true);
+        log.info("Ledger posted txn={} amount={} debit={} credit={}",
+                txn.getTransactionRef(), amount, debit.getCode(), credit.getCode());
     }
 
     private void addEntry(PaymentTransaction txn, LedgerAccount account, String type, BigDecimal amount) {

@@ -5,7 +5,7 @@ import { formatMoney } from '../money'
 import { Icon, paths } from '../icons'
 
 export default function ProductCard({ product }) {
-  const { addToCart, toggleWish, isWished } = useStore()
+  const { addToCart, toggleWish, isWished, user } = useStore()
   const [msg, setMsg] = useState('')
   if (!product) return null
   const off = product.compareAtPrice ? Math.round((1 - Number(product.price) / Number(product.compareAtPrice)) * 100) : 0
@@ -34,10 +34,16 @@ export default function ProductCard({ product }) {
         {product.compareAtPrice && <s>{formatMoney(product.compareAtPrice)}</s>}
       </div>
       <div className="card-actions">
-        <button className="btn" onClick={add}>Add to cart</button>
-        <button className={`wish ${wished ? 'on' : ''}`} onClick={() => toggleWish(product.id).catch((e) => setMsg(e.message))} aria-label="Wishlist">
-          <Icon d={paths.heart} size={18} />
-        </button>
+        {user ? (
+          <>
+            <button className="btn" onClick={add}>Add to cart</button>
+            <button className={`wish ${wished ? 'on' : ''}`} onClick={() => toggleWish(product.id).catch((e) => setMsg(e.message))} aria-label="Wishlist">
+              <Icon d={paths.heart} size={18} />
+            </button>
+          </>
+        ) : (
+          <Link className="btn outline" to="/auth">Sign in to buy</Link>
+        )}
       </div>
       {msg && <small className={msg === 'Added to cart' ? 'toast-ok' : 'muted'}>{msg}</small>}
     </article>

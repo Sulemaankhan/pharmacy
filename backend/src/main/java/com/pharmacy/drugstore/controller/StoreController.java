@@ -6,8 +6,10 @@ import com.pharmacy.drugstore.entity.User;
 import com.pharmacy.drugstore.entity.WishlistItem;
 import com.pharmacy.drugstore.service.AuthService;
 import com.pharmacy.drugstore.service.StoreService;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 import java.util.List;
 import java.util.Map;
 
@@ -55,6 +57,9 @@ public class StoreController {
     }
 
     private User user(Authentication auth) {
+        if (auth == null || auth.getName() == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Please sign in");
+        }
         return authService.requireUser(auth.getName());
     }
 }

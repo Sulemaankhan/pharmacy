@@ -1,11 +1,14 @@
 package com.pharmacy.drugstore.security;
 
 import com.pharmacy.drugstore.entity.User;
+import com.pharmacy.drugstore.logging.RequestMdc;
 import com.pharmacy.drugstore.repository.UserRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -17,6 +20,7 @@ import java.util.List;
 
 @Component
 public class JwtAuthFilter extends OncePerRequestFilter {
+    private static final Logger log = LoggerFactory.getLogger(JwtAuthFilter.class);
     private final JwtService jwtService;
     private final UserRepository userRepository;
 
@@ -40,15 +44,25 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 String email = jwtService.extractEmail(header.substring(7));
                 User user = userRepository.findByEmail(email).orElse(null);
                 if (user != null) {
+                    RequestMdc.setUser(user);
                     var auth = new UsernamePasswordAuthenticationToken(
                             user.getEmail(),
                             null,
                             List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole())));
                     SecurityContextHolder.getContext().setAuthentication(auth);
+                    log.info("JWT accepted {}", RequestMdc.describe(user));
+                } else {
+                    RequestMdc.setAnonymous();
+                    log.warn("JWT email={} did not match a user path={}", email, request.getRequestURI());
                 }
-            } catch (Exception ignored) {
+            } catch (Exception ex) {
+                RequestMdc.setAnonymous();
                 SecurityContextHolder.clearContext();
+                log.warn("JWT rejected path={} reason={}", request.getRequestURI(), ex.getClass().getSimpleName());
             }
+        } else {
+            RequestMdc.setAnonymous();
+            log.debug("No bearer token path={}", request.getRequestURI());
         }
         chain.doFilter(request, response);
     }

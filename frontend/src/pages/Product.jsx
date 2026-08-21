@@ -6,7 +6,7 @@ import ProductCard from '../components/ProductCard'
 
 export default function ProductPage() {
   const { id } = useParams()
-  const { products, addToCart, toggleWish, isWished } = useStore()
+  const { products, addToCart, toggleWish, isWished, user } = useStore()
   const product = products.find((p) => String(p.id) === id)
   const [qty, setQty] = useState(1)
   const [msg, setMsg] = useState('')
@@ -39,11 +39,20 @@ export default function ProductPage() {
             <button onClick={() => setQty(qty + 1)}>+</button>
           </div>
           <div className="card-actions">
-            <button className="btn" onClick={() => addToCart(product.id, qty).then(() => setMsg('Added to cart')).catch((e) => setMsg(e.message))}>Add to cart</button>
-            <button className="btn outline" onClick={() => toggleWish(product.id).catch((e) => setMsg(e.message))}>
-              {isWished(product.id) ? 'Wishlisted' : 'Add to wishlist'}
-            </button>
+            {user && (
+              <button className="btn" onClick={() => addToCart(product.id, qty).then(() => setMsg('Added to cart')).catch((e) => setMsg(e.message))}>Add to cart</button>
+            )}
+            {user && (
+              <button className="btn outline" onClick={() => toggleWish(product.id).catch((e) => setMsg(e.message))}>
+                {isWished(product.id) ? 'Wishlisted' : 'Add to wishlist'}
+              </button>
+            )}
           </div>
+          {!user && (
+            <p className="muted" style={{ marginTop: 10 }}>
+              <Link to="/auth">Sign in</Link> to add this item to your cart or wishlist.
+            </p>
+          )}
           {msg && <p className={msg === 'Added to cart' ? 'toast-ok' : 'muted'} style={{ marginTop: 10 }}>{msg}</p>}
         </div>
       </div>

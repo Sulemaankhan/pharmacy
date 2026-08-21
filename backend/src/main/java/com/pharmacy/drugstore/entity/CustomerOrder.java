@@ -47,6 +47,7 @@ public class CustomerOrder {
     public String getOrderNumber() { return orderNumber; }
     public void setOrderNumber(String orderNumber) { this.orderNumber = orderNumber; }
     public User getUser() { return user; }
+    public Long getUserId() { return user == null ? null : user.getId(); }
     public void setUser(User user) { this.user = user; }
     public PaymentStatus getStatus() { return status; }
     public void setStatus(PaymentStatus status) { this.status = status; }

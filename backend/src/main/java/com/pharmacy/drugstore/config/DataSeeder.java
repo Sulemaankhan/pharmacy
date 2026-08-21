@@ -6,6 +6,8 @@ import com.pharmacy.drugstore.entity.User;
 import com.pharmacy.drugstore.repository.CategoryRepository;
 import com.pharmacy.drugstore.repository.ProductRepository;
 import com.pharmacy.drugstore.repository.UserRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -17,6 +19,7 @@ import java.util.List;
 
 @Configuration
 public class DataSeeder {
+    private static final Logger log = LoggerFactory.getLogger(DataSeeder.class);
     @Bean
     CommandLineRunner seedData(
             CategoryRepository categories,
@@ -33,6 +36,8 @@ public class DataSeeder {
                 demo.setPassword(encoder.encode("demo123"));
                 demo.setRole("USER");
                 users.save(demo);
+                log.info("Seeded demo user id={} email={} name={} role={}",
+                        demo.getId(), demo.getEmail(), demo.getName(), demo.getRole());
             }
             if (products.count() > 0) {
                 applyInrPrices(products);

@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useStore } from '../store'
-import { api, asList, downloadFile } from '../api'
+import { downloadFile } from '../api'
 import { formatMoney } from '../money'
 
 function formatDate(iso) {
@@ -16,26 +16,20 @@ function statusClass(status) {
 }
 
 export default function Orders() {
-  const { user } = useStore()
-  const [orders, setOrders] = useState([])
+  const { user, orders } = useStore()
   const [filter, setFilter] = useState('ALL')
   const [error, setError] = useState('')
-  const [loading, setLoading] = useState(true)
   const [exporting, setExporting] = useState('')
 
-  useEffect(() => {
-    if (!user) return
-    setLoading(true)
-    api('/api/orders')
-      .then((data) => setOrders(asList(data)))
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false))
-  }, [user])
+  const mine = useMemo(
+    () => orders.filter((o) => o.userId == null || Number(o.userId) === Number(user?.userId)),
+    [orders, user?.userId]
+  )
 
   const list = useMemo(() => {
-    if (filter === 'ALL') return orders
-    return orders.filter((o) => o.status === filter)
-  }, [orders, filter])
+    if (filter === 'ALL') return mine
+    return mine.filter((o) => o.status === filter)
+  }, [mine, filter])
 
   async function exportHistory(format) {
     setError('')
@@ -68,7 +62,7 @@ export default function Orders() {
       <div className="page-head">
         <div>
           <h2 className="page-title">Order history</h2>
-          <p className="muted">{orders.length} order{orders.length === 1 ? '' : 's'} placed</p>
+          <p className="muted">{mine.length} order{mine.length === 1 ? '' : 's'} placed</p>
         </div>
         <div className="export-actions">
           <button className="btn outline" disabled={!!exporting} onClick={() => exportHistory('pdf')}>
@@ -89,8 +83,7 @@ export default function Orders() {
       </div>
 
       {error && <p className="error">{error}</p>}
-      {loading && <p className="muted">Loading orders...</p>}
-      {!loading && list.length === 0 && (
+      {list.length === 0 && (
         <div className="empty">
           <p>No orders in this view yet.</p>
           <Link className="btn" to="/shop" style={{ marginTop: 16 }}>Start shopping</Link>

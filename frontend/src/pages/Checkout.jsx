@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useStore } from '../store'
 import { formatMoney } from '../money'
 import { api } from '../api'
+import { clientLog } from '../log'
 
 const MODES = [
   { code: 'UPI', label: 'UPI', hint: 'GPay / PhonePe / Paytm' },
@@ -40,17 +41,25 @@ export default function Checkout() {
     setError('')
     setBusy(true)
     try {
+      clientLog('info', 'checkout.start', { paymentMode: mode, cartItems: cart.length, total: grand })
       const result = await api('/api/payments/checkout', {
         method: 'POST',
         body: JSON.stringify({ paymentMode: mode, ...form })
       })
       await refreshUserData()
       if (result.success) {
+        clientLog('info', 'checkout.success', {
+          orderNumber: result.orderNumber,
+          transactionRef: result.transactionRef,
+          status: result.status,
+        })
         navigate(`/order/${result.orderNumber}`, { state: result })
       } else {
+        clientLog('warn', 'checkout.failed', { message: result.message, orderNumber: result.orderNumber })
         setError(result.message || 'Payment failed')
       }
     } catch (err) {
+      clientLog('error', 'checkout.error', { error: err.message, paymentMode: mode })
       setError(err.message)
     } finally {
       setBusy(false)

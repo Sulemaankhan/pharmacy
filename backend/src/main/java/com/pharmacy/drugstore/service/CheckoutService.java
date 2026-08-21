@@ -19,6 +19,9 @@ import com.pharmacy.drugstore.repository.CartItemRepository;
 import com.pharmacy.drugstore.repository.CustomerOrderRepository;
 import com.pharmacy.drugstore.repository.PaymentTransactionRepository;
 import com.pharmacy.drugstore.repository.ProductRepository;
+import com.pharmacy.drugstore.logging.RequestMdc;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
@@ -39,6 +42,7 @@ import java.util.stream.Collectors;
 
 @Service
 public class CheckoutService {
+    private static final Logger log = LoggerFactory.getLogger(CheckoutService.class);
     private static final BigDecimal FREE_SHIPPING_AT = new BigDecimal("499");
     private static final BigDecimal SHIPPING_FEE = new BigDecimal("49");
 
@@ -69,8 +73,11 @@ public class CheckoutService {
 
     @Transactional(rollbackFor = Exception.class, isolation = Isolation.REPEATABLE_READ)
     public PaymentResponse checkout(User user, PaymentRequest request) {
-        List<CartItem> cart = cartItems.findByUser(user);
+        List<CartItem> cart = cartItems.findByUserId(user.getId());
+        log.info("Checkout start {} cartItems={} mode={}",
+                RequestMdc.describe(user), cart.size(), request == null ? null : request.paymentMode());
         if (cart.isEmpty()) {
+            log.warn("Checkout aborted empty cart {}", RequestMdc.describe(user));
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Your cart is empty");
         }
 
@@ -108,6 +115,8 @@ public class CheckoutService {
             order.getItems().add(line);
         }
         orders.saveAndFlush(order);
+        log.info("Checkout order created {} orderNumber={} items={} subtotal={} shipping={} total={}",
+                RequestMdc.describe(user), order.getOrderNumber(), order.getItems().size(), subtotal, shipping, total);
 
         PaymentTransaction txn = new PaymentTransaction();
         txn.setTransactionRef("TXN-" + UUID.randomUUID().toString().replace("-", "").substring(0, 16).toUpperCase());
@@ -120,6 +129,8 @@ public class CheckoutService {
 
         PaymentOutcome outcome = strategies.of(mode)
                 .process(new PaymentContext(user, total, order.getOrderNumber(), request));
+        log.info("Checkout payment {} orderNumber={} mode={} success={} message={}",
+                RequestMdc.describe(user), order.getOrderNumber(), mode, outcome.success(), outcome.message());
         txn.setGatewayMessage(outcome.message());
         txn.setMaskedInstrument(outcome.maskedInstrument());
         txn.setCompletedAt(Instant.now());
@@ -130,6 +141,8 @@ public class CheckoutService {
             transactions.saveAndFlush(txn);
             orders.saveAndFlush(order);
             queueNotification(NotificationKind.PAYMENT_FAILURE, user, order, txn);
+            log.warn("Checkout failed {} orderNumber={} txn={}",
+                    RequestMdc.describe(user), order.getOrderNumber(), txn.getTransactionRef());
             return toResponse(false, order, txn, outcome.message(), "QUEUED");
         }
 
@@ -145,22 +158,30 @@ public class CheckoutService {
             product.setStock(product.getStock() - item.getQuantity());
             products.save(product);
         }
-        cartItems.deleteByUser(user);
+        cartItems.deleteByUserId(user.getId());
         transactions.saveAndFlush(txn);
         orders.saveAndFlush(order);
 
         queueNotification(NotificationKind.PAYMENT_SUCCESS, user, order, txn);
+        log.info("Checkout success {} orderNumber={} txn={} ledgerPosted={}",
+                RequestMdc.describe(user), order.getOrderNumber(), txn.getTransactionRef(), txn.isLedgerPosted());
         return toResponse(true, order, txn, "Payment posted to ledger. Confirmation will be emailed to " + user.getEmail(),
                 "QUEUED");
     }
 
     public List<CustomerOrder> history(User user) {
-        return orders.findByUserOrderByCreatedAtDesc(user);
+        List<CustomerOrder> list = orders.findByUserIdOrderByCreatedAtDesc(user.getId());
+        log.info("Order history {} count={}", RequestMdc.describe(user), list.size());
+        return list;
     }
 
     public CustomerOrder get(User user, String orderNumber) {
-        return orders.findByOrderNumberAndUser(orderNumber, user)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
+        log.info("Order get {} orderNumber={}", RequestMdc.describe(user), orderNumber);
+        return orders.findByOrderNumberAndUserId(orderNumber, user.getId())
+                .orElseThrow(() -> {
+                    log.warn("Order not found {} orderNumber={}", RequestMdc.describe(user), orderNumber);
+                    return new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found");
+                });
     }
 
     public PaymentTransaction getTransaction(String ref) {
@@ -177,6 +198,8 @@ public class CheckoutService {
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
+                log.info("Notification send {} kind={} orderNumber={} to={}",
+                        RequestMdc.describe(user), kind, order.getOrderNumber(), user.getEmail());
                 notifications.create(kind).send(user, order, txn);
             }
         });

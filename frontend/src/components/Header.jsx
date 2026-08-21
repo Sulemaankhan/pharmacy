@@ -69,16 +69,20 @@ export default function Header() {
               Compare
               <span className="badge">0</span>
             </Link>
-            <Link className="icon-btn" to="/wishlist">
-              <div className="icon-glyph"><Icon d={paths.heart} /></div>
-              Wishlist
-              <span className="badge">{wishCount}</span>
-            </Link>
-            <Link className="icon-btn" to="/cart">
-              <div className="icon-glyph"><Icon d={paths.bag} /></div>
-              <div className="cart-total">{formatMoney(cartTotal)}</div>
-              <span className="badge">{cartCount}</span>
-            </Link>
+            {user && (
+              <>
+                <Link className="icon-btn" to="/wishlist">
+                  <div className="icon-glyph"><Icon d={paths.heart} /></div>
+                  Wishlist
+                  <span className="badge">{wishCount}</span>
+                </Link>
+                <Link className="icon-btn" to="/cart">
+                  <div className="icon-glyph"><Icon d={paths.bag} /></div>
+                  <div className="cart-total">{formatMoney(cartTotal)}</div>
+                  <span className="badge">{cartCount}</span>
+                </Link>
+              </>
+            )}
             {user ? (
               <button type="button" className="btn logout-btn" onClick={handleLogout}>Logout</button>
             ) : (
@@ -106,7 +110,7 @@ export default function Header() {
           <div className="nav-links">
             <NavLink to="/" end>Home</NavLink>
             <NavLink to="/shop">Shop</NavLink>
-            <NavLink to="/orders">Orders</NavLink>
+            {user && <NavLink to="/orders">Orders</NavLink>}
             <NavLink to="/about">About Us</NavLink>
             <NavLink to="/contact">Contact Us</NavLink>
           </div>
@@ -118,7 +122,7 @@ export default function Header() {
         <div className="container mobile-menu">
           <Link to="/" onClick={() => setOpen(false)}>Home</Link>
           <Link to="/shop" onClick={() => setOpen(false)}>Shop</Link>
-          <Link to="/orders" onClick={() => setOpen(false)}>Orders</Link>
+          {user && <Link to="/orders" onClick={() => setOpen(false)}>Orders</Link>}
           <Link to="/about" onClick={() => setOpen(false)}>About</Link>
           <Link to="/contact" onClick={() => setOpen(false)}>Contact</Link>
           {user ? (

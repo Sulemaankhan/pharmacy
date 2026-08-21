@@ -34,7 +34,7 @@ export default function Footer() {
               <h3>Shop</h3>
               <Link to="/shop">All products</Link>
               <Link to="/shop?deals=1">Deals of the day</Link>
-              <Link to="/wishlist">Wishlist</Link>
+              {user && <Link to="/wishlist">Wishlist</Link>}
             </div>
             <div>
               <h3>Help</h3>
@@ -47,12 +47,12 @@ export default function Footer() {
               {user ? (
                 <>
                   <Link to="/orders">Order history</Link>
+                  <Link to="/cart">Cart</Link>
                   <button type="button" className="link-btn footer-logout" onClick={handleLogout}>Logout</button>
                 </>
               ) : (
                 <Link to="/auth">Sign in</Link>
               )}
-              <Link to="/cart">Cart</Link>
             </div>
           </div>
           <div className="copy">© {new Date().getFullYear()} Medicine Drugstore. All rights reserved.</div>
@@ -63,7 +63,9 @@ export default function Footer() {
         <NavLink to="/shop?deals=1"><Icon d={paths.flame} size={18} />Hot sale</NavLink>
         <NavLink to="/" end className="home-pill"><Icon d={paths.home} size={18} />Home</NavLink>
         <NavLink to="/contact"><Icon d={paths.support} size={18} />Contact</NavLink>
-        <NavLink to="/cart"><Icon d={paths.bag} size={18} />Checkout</NavLink>
+        {user
+          ? <NavLink to="/cart"><Icon d={paths.bag} size={18} />Checkout</NavLink>
+          : <NavLink to="/auth"><Icon d={paths.bag} size={18} />Sign in</NavLink>}
       </nav>
     </>
   )

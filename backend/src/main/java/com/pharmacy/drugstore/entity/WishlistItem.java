@@ -21,7 +21,9 @@ public class WishlistItem {
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
+    @JsonIgnore
     public User getUser() { return user; }
+    public Long getUserId() { return user == null ? null : user.getId(); }
     public void setUser(User user) { this.user = user; }
     public Product getProduct() { return product; }
     public void setProduct(Product product) { this.product = product; }

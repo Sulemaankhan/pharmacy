@@ -46,3 +46,4 @@ google-oauth.properties
 .sts4-cache
 .git-hooks/
 node_modules
+logs/

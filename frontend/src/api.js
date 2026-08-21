@@ -1,6 +1,10 @@
+import { clientLog, newRequestId, redact } from './log'
+
 const TOKEN = 'pharmacy_token'
 const USER = 'pharmacy_user'
 const API_BASES = ['', 'http://localhost:8082']
+
+const authClearedListeners = new Set()
 
 export function getToken() {
   return localStorage.getItem(TOKEN)
@@ -13,12 +17,89 @@ export function getUser() {
 
 export function setAuth(data) {
   localStorage.setItem(TOKEN, data.token)
-  localStorage.setItem(USER, JSON.stringify({ userId: data.userId, name: data.name, email: data.email, role: data.role }))
+  localStorage.setItem(USER, JSON.stringify({
+    userId: data.userId ?? data.id,
+    name: data.name,
+    email: data.email,
+    role: data.role,
+  }))
+  clientLog('info', 'auth.set', {
+    userId: data.userId ?? data.id,
+    email: data.email,
+    name: data.name,
+    role: data.role,
+  })
 }
 
 export function clearAuth() {
   localStorage.removeItem(TOKEN)
   localStorage.removeItem(USER)
+}
+
+function decodeJwtPayload(token) {
+  try {
+    let part = token.split('.')[1]
+    if (!part) return null
+    part = part.replace(/-/g, '+').replace(/_/g, '/')
+    const pad = part.length % 4
+    if (pad) part += '='.repeat(4 - pad)
+    return JSON.parse(atob(part))
+  } catch {
+    return null
+  }
+}
+
+export function tokenExpiresAt(token = getToken()) {
+  if (!token) return 0
+  const payload = decodeJwtPayload(token)
+  return payload?.exp ? payload.exp * 1000 : 0
+}
+
+export function isTokenValid(token = getToken()) {
+  if (!token) return false
+  const payload = decodeJwtPayload(token)
+  if (!payload) return false
+  if (!payload.exp) return true
+  return payload.exp * 1000 > Date.now() + 1000
+}
+
+export function sameUserId(a, b) {
+  if (a == null || b == null || a === '' || b === '') return false
+  return Number(a) === Number(b)
+}
+
+export function ownedByCurrentUser(data, userId = getUser()?.userId) {
+  if (userId == null || userId === '') return []
+  return asList(data).filter((item) => item?.userId == null || sameUserId(item.userId, userId))
+}
+
+export function onAuthCleared(listener) {
+  authClearedListeners.add(listener)
+  return () => authClearedListeners.delete(listener)
+}
+
+export function expireSession() {
+  if (!getToken() && !getUser()) return
+  const current = getUser()
+  clientLog('warn', 'auth.expired', {
+    userId: current?.userId,
+    email: current?.email,
+    name: current?.name,
+  })
+  clearAuth()
+  authClearedListeners.forEach((fn) => fn())
+}
+
+export function getValidUser() {
+  if (!isTokenValid()) {
+    clearAuth()
+    return null
+  }
+  return getUser()
+}
+
+function isAuthRequest(path) {
+  return path.startsWith('/api/auth')
 }
 
 export function asList(data) {
@@ -40,17 +121,38 @@ async function readMessage(res, fallback) {
 }
 
 export async function api(path, options = {}) {
-  const headers = { ...(options.headers || {}) }
+  const requestId = newRequestId()
+  const method = (options.method || 'GET').toUpperCase()
+  const headers = { ...(options.headers || {}), 'X-Request-Id': requestId }
   if (options.body) headers['Content-Type'] = 'application/json'
-  const token = getToken()
+  let token = getToken()
+  if (token && !isTokenValid(token)) {
+    expireSession()
+    token = null
+  }
   if (token) headers.Authorization = `Bearer ${token}`
+  let parsedBody
+  try { parsedBody = options.body ? JSON.parse(options.body) : undefined } catch { parsedBody = undefined }
+  clientLog('info', 'api.request', { requestId, method, path, body: redact(parsedBody) })
 
   let lastError
+  let unauthorized = false
   for (const base of API_BASES) {
     try {
       const res = await fetch(`${base}${path}`, { ...options, headers })
+      const backendRequestId = res.headers.get('X-Request-Id') || requestId
+      clientLog(res.ok ? 'info' : 'warn', 'api.response', {
+        requestId: backendRequestId,
+        method,
+        path,
+        base: base || 'proxy',
+        status: res.status,
+      })
       if (!res.ok) {
-        lastError = new Error(await readMessage(res, `Request failed (${res.status})`))
+        if (res.status === 401) unauthorized = true
+        lastError = new Error(await readMessage(res, res.status === 401
+          ? 'Session expired. Please sign in again.'
+          : `Request failed (${res.status})`))
         continue
       }
       if (res.status === 204) return null
@@ -59,8 +161,11 @@ export async function api(path, options = {}) {
       return JSON.parse(text)
     } catch (err) {
       lastError = err
+      clientLog('warn', 'api.network', { requestId, method, path, base: base || 'proxy', error: err.message })
     }
   }
+  if (unauthorized && token && !isAuthRequest(path)) expireSession()
+  clientLog('error', 'api.failed', { requestId, method, path, error: lastError?.message })
   throw lastError || new Error('Request failed')
 }
 
@@ -73,19 +178,30 @@ function fileNameFromDisposition(disposition, fallback) {
 }
 
 export async function downloadFile(path, fallbackName) {
+  const requestId = newRequestId()
   const headers = {
     Accept: 'application/pdf, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/json',
+    'X-Request-Id': requestId,
   }
-  const token = getToken()
+  let token = getToken()
+  if (token && !isTokenValid(token)) {
+    expireSession()
+    token = null
+  }
   if (token) headers.Authorization = `Bearer ${token}`
+  clientLog('info', 'download.request', { requestId, path })
 
   let lastError
+  let unauthorized = false
   for (const base of API_BASES) {
     try {
       const res = await fetch(`${base}${path}`, { headers })
       const contentType = (res.headers.get('Content-Type') || '').toLowerCase()
       if (!res.ok) {
-        lastError = new Error(await readMessage(res, `Download failed (${res.status})`))
+        if (res.status === 401) unauthorized = true
+        lastError = new Error(await readMessage(res, res.status === 401
+          ? 'Session expired. Please sign in again.'
+          : `Download failed (${res.status})`))
         continue
       }
       if (contentType.includes('application/json')) {
@@ -102,10 +218,13 @@ export async function downloadFile(path, fallbackName) {
       link.click()
       link.remove()
       URL.revokeObjectURL(url)
+      clientLog('info', 'download.success', { requestId, path, filename })
       return
     } catch (err) {
       lastError = err
     }
   }
+  if (unauthorized && token && !isAuthRequest(path)) expireSession()
+  clientLog('error', 'download.failed', { requestId, path, error: lastError?.message })
   throw lastError || new Error('Download failed')
 }

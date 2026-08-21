@@ -18,11 +18,19 @@ export default function OrderDetail() {
   const [exporting, setExporting] = useState('')
 
   useEffect(() => {
-    if (!user) return
+    setOrder(null)
+    setError('')
+    if (!user?.userId) return
     api(`/api/orders/${orderNumber}`)
-      .then(setOrder)
+      .then((data) => {
+        if (data?.userId != null && Number(data.userId) !== Number(user.userId)) {
+          setError('Order not found')
+          return
+        }
+        setOrder(data)
+      })
       .catch((e) => setError(e.message))
-  }, [user, orderNumber])
+  }, [user?.userId, orderNumber])
 
   async function exportOrder(format) {
     setMsg('')
