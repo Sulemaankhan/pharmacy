@@ -70,11 +70,8 @@ export default function Home() {
             <div className="hero-dots"><span className="on" /><span /><span /></div>
           </div>
           <div className="hero-art">
-            <span className="orb" style={{ width: 240, height: 240, right: 36, top: 28 }} />
-            <span className="orb" style={{ width: 96, height: 96, left: 24, bottom: 46, opacity: 0.32 }} />
-            <Virus style={{ right: 28, top: 36 }} />
-            <Virus style={{ left: 48, top: 92, width: 28, height: 28 }} />
-            <Virus style={{ right: 90, bottom: 64, width: 32, height: 32 }} />
+            <span className="orb" style={{ width: 220, height: 220, right: 48, top: 48 }} />
+            <Virus style={{ right: 36, top: 44 }} />
             <img src="https://images.unsplash.com/photo-1584483766114-2cea6facdf57?w=700" alt="Hand sanitizer" />
           </div>
         </div>

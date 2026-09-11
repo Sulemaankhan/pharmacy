@@ -13,6 +13,35 @@ const MODES = [
   { code: 'COD', label: 'Cash on delivery', hint: 'Pay when delivered' }
 ]
 
+function shipKey(userId) {
+  return `pharmacy_ship_${userId}`
+}
+
+function loadShip(user) {
+  try {
+    const saved = user?.userId ? JSON.parse(localStorage.getItem(shipKey(user.userId)) || 'null') : null
+    return {
+      recipientName: saved?.recipientName || user?.name || '',
+      address: saved?.address || '',
+      city: saved?.city || '',
+      state: saved?.state || '',
+      pincode: saved?.pincode || '',
+      contactNumber: saved?.contactNumber || '',
+      email: saved?.email || user?.email || '',
+    }
+  } catch {
+    return {
+      recipientName: user?.name || '',
+      address: '',
+      city: '',
+      state: '',
+      pincode: '',
+      contactNumber: '',
+      email: user?.email || '',
+    }
+  }
+}
+
 export default function Checkout() {
   const { cart, cartTotal, user, refreshUserData } = useStore()
   const shipping = cartTotal >= 499 || cart.length === 0 ? 0 : 49
@@ -27,7 +56,8 @@ export default function Checkout() {
     cvv: '',
     bankName: 'HDFC',
     walletProvider: 'PHONEPE',
-    walletPhone: ''
+    walletPhone: '',
+    ...loadShip(user),
   })
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
@@ -39,23 +69,59 @@ export default function Checkout() {
   async function pay(e) {
     e.preventDefault()
     setError('')
+    const phone = String(form.contactNumber || '').replace(/\D/g, '')
+    const pin = String(form.pincode || '').replace(/\D/g, '')
+    if (!form.recipientName.trim() || !form.address.trim() || !form.city.trim() || !form.state.trim()) {
+      setError('Enter the full delivery address')
+      return
+    }
+    if (pin.length !== 6) {
+      setError('Enter a 6-digit pincode')
+      return
+    }
+    if (phone.length !== 10) {
+      setError('Enter a 10-digit contact number')
+      return
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
+      setError('Enter a valid email ID')
+      return
+    }
     setBusy(true)
     try {
       clientLog('info', 'checkout.start', { paymentMode: mode, cartItems: cart.length, total: grand })
       const result = await api('/api/payments/checkout', {
         method: 'POST',
-        body: JSON.stringify({ paymentMode: mode, ...form })
+        body: JSON.stringify({
+          paymentMode: mode,
+          ...form,
+          contactNumber: phone,
+          pincode: pin,
+        })
       })
+      if (user?.userId) {
+        localStorage.setItem(shipKey(user.userId), JSON.stringify({
+          recipientName: form.recipientName,
+          address: form.address,
+          city: form.city,
+          state: form.state,
+          pincode: pin,
+          contactNumber: phone,
+          email: form.email,
+        }))
+      }
       await refreshUserData()
-      if (result.success) {
-        clientLog('info', 'checkout.success', {
+      if (result.orderNumber) {
+        clientLog(result.success ? 'info' : 'warn', result.success ? 'checkout.success' : 'checkout.failed', {
           orderNumber: result.orderNumber,
           transactionRef: result.transactionRef,
+          trackingNumber: result.trackingNumber,
           status: result.status,
+          emailStatus: result.emailStatus,
         })
         navigate(`/order/${result.orderNumber}`, { state: result })
       } else {
-        clientLog('warn', 'checkout.failed', { message: result.message, orderNumber: result.orderNumber })
+        clientLog('warn', 'checkout.failed', { message: result.message })
         setError(result.message || 'Payment failed')
       }
     } catch (err) {
@@ -93,66 +159,101 @@ export default function Checkout() {
       <p className="crumb">Home / Cart / Checkout</p>
       <h2 className="page-title">Checkout</h2>
       <form className="cart-layout" onSubmit={pay}>
-        <div className="panel wide">
-          <h3>Payment mode</h3>
-          <div className="pay-modes">
-            {MODES.map((m) => (
-              <button type="button" key={m.code} className={`pay-mode ${mode === m.code ? 'active' : ''}`} onClick={() => setMode(m.code)}>
-                <b>{m.label}</b>
-                <small>{m.hint}</small>
-              </button>
-            ))}
+        <div>
+          <div className="panel wide">
+            <h3>Delivery details</h3>
+            <p className="muted" style={{ marginTop: 4 }}>Live tracking updates go to this contact number and email ID.</p>
+            <label>Recipient name</label>
+            <input value={form.recipientName} onChange={set('recipientName')} required />
+            <label>Address</label>
+            <textarea rows="3" value={form.address} onChange={set('address')} placeholder="House / street / landmark" required />
+            <div className="split-3">
+              <div>
+                <label>City</label>
+                <input value={form.city} onChange={set('city')} required />
+              </div>
+              <div>
+                <label>State</label>
+                <input value={form.state} onChange={set('state')} required />
+              </div>
+              <div>
+                <label>Pincode</label>
+                <input value={form.pincode} onChange={set('pincode')} placeholder="6 digits" maxLength="6" required />
+              </div>
+            </div>
+            <div className="split-2">
+              <div>
+                <label>Contact number</label>
+                <input value={form.contactNumber} onChange={set('contactNumber')} placeholder="10-digit mobile" maxLength="10" required />
+              </div>
+              <div>
+                <label>Email ID</label>
+                <input type="email" value={form.email} onChange={set('email')} placeholder="name@email.com" required />
+              </div>
+            </div>
           </div>
 
-          {mode === 'UPI' && (
-            <>
-              <label>UPI ID</label>
-              <input value={form.upiId} onChange={set('upiId')} placeholder="name@okaxis" required />
-            </>
-          )}
-          {mode === 'CARD' && (
-            <>
-              <label>Card holder</label>
-              <input value={form.cardHolder} onChange={set('cardHolder')} required />
-              <label>Card number</label>
-              <input value={form.cardNumber} onChange={set('cardNumber')} placeholder="4111111111111111" maxLength="16" required />
-              <div className="split-2">
-                <div>
-                  <label>Expiry (MM/YY)</label>
-                  <input value={form.expiry} onChange={set('expiry')} placeholder="12/28" required />
+          <div className="panel wide" style={{ marginTop: 16 }}>
+            <h3>Payment mode</h3>
+            <div className="pay-modes">
+              {MODES.map((m) => (
+                <button type="button" key={m.code} className={`pay-mode ${mode === m.code ? 'active' : ''}`} onClick={() => setMode(m.code)}>
+                  <b>{m.label}</b>
+                  <small>{m.hint}</small>
+                </button>
+              ))}
+            </div>
+
+            {mode === 'UPI' && (
+              <>
+                <label>UPI ID</label>
+                <input value={form.upiId} onChange={set('upiId')} placeholder="name@okaxis" required />
+              </>
+            )}
+            {mode === 'CARD' && (
+              <>
+                <label>Card holder</label>
+                <input value={form.cardHolder} onChange={set('cardHolder')} required />
+                <label>Card number</label>
+                <input value={form.cardNumber} onChange={set('cardNumber')} placeholder="4111111111111111" maxLength="16" required />
+                <div className="split-2">
+                  <div>
+                    <label>Expiry (MM/YY)</label>
+                    <input value={form.expiry} onChange={set('expiry')} placeholder="12/28" required />
+                  </div>
+                  <div>
+                    <label>CVV</label>
+                    <input value={form.cvv} onChange={set('cvv')} type="password" maxLength="3" required />
+                  </div>
                 </div>
-                <div>
-                  <label>CVV</label>
-                  <input value={form.cvv} onChange={set('cvv')} type="password" maxLength="3" required />
-                </div>
-              </div>
-            </>
-          )}
-          {mode === 'NET_BANKING' && (
-            <>
-              <label>Bank</label>
-              <select value={form.bankName} onChange={set('bankName')}>
-                {['SBI', 'HDFC', 'ICICI', 'AXIS', 'PNB', 'KOTAK'].map((b) => <option key={b}>{b}</option>)}
-              </select>
-            </>
-          )}
-          {mode === 'WALLET' && (
-            <>
-              <label>Wallet</label>
-              <select value={form.walletProvider} onChange={set('walletProvider')}>
-                <option value="PHONEPE">PhonePe</option>
-                <option value="PAYTM">Paytm</option>
-                <option value="AMAZONPAY">Amazon Pay</option>
-                <option value="MOBIKWIK">MobiKwik</option>
-              </select>
-              <label>Mobile number</label>
-              <input value={form.walletPhone} onChange={set('walletPhone')} placeholder="10-digit number" required />
-            </>
-          )}
-          {mode === 'COD' && (
-            <p className="demo-note">Pay in cash when your order arrives. Available for orders up to ₹5,000.</p>
-          )}
-          {error && <p className="error">{error}</p>}
+              </>
+            )}
+            {mode === 'NET_BANKING' && (
+              <>
+                <label>Bank</label>
+                <select value={form.bankName} onChange={set('bankName')}>
+                  {['SBI', 'HDFC', 'ICICI', 'AXIS', 'PNB', 'KOTAK'].map((b) => <option key={b}>{b}</option>)}
+                </select>
+              </>
+            )}
+            {mode === 'WALLET' && (
+              <>
+                <label>Wallet</label>
+                <select value={form.walletProvider} onChange={set('walletProvider')}>
+                  <option value="PHONEPE">PhonePe</option>
+                  <option value="PAYTM">Paytm</option>
+                  <option value="AMAZONPAY">Amazon Pay</option>
+                  <option value="MOBIKWIK">MobiKwik</option>
+                </select>
+                <label>Mobile number</label>
+                <input value={form.walletPhone} onChange={set('walletPhone')} placeholder="10-digit number" required />
+              </>
+            )}
+            {mode === 'COD' && (
+              <p className="demo-note">Pay in cash when your order arrives. Available for orders up to ₹5,000.</p>
+            )}
+            {error && <p className="error">{error}</p>}
+          </div>
         </div>
 
         <aside className="summary">

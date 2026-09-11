@@ -12,7 +12,7 @@ public class EmailNotificationLog {
 
     private String recipient;
     private String subject;
-    @Column(length = 4000)
+    @Column(columnDefinition = "TEXT")
     private String body;
     private String type;
     private String status;

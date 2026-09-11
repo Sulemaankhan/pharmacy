@@ -3,6 +3,8 @@ import { Link, useParams } from 'react-router-dom'
 import { useStore } from '../store'
 import { api, downloadFile } from '../api'
 import { formatMoney } from '../money'
+import ShipmentTracker from '../components/ShipmentTracker'
+import { fetchOrderShipment } from '../shipments'
 
 function formatDate(iso) {
   if (!iso) return ''
@@ -13,9 +15,11 @@ export default function OrderDetail() {
   const { orderNumber } = useParams()
   const { user, addToCart } = useStore()
   const [order, setOrder] = useState(null)
+  const [shipment, setShipment] = useState(null)
   const [error, setError] = useState('')
   const [msg, setMsg] = useState('')
   const [exporting, setExporting] = useState('')
+  const [emailing, setEmailing] = useState(false)
 
   useEffect(() => {
     setOrder(null)
@@ -28,8 +32,26 @@ export default function OrderDetail() {
           return
         }
         setOrder(data)
+        setShipment(data.shipment || null)
       })
       .catch((e) => setError(e.message))
+  }, [user?.userId, orderNumber])
+
+  useEffect(() => {
+    if (!user?.userId || !orderNumber) return undefined
+    let stopped = false
+    const loadShip = () => {
+      fetchOrderShipment(orderNumber)
+        .then((data) => {
+          if (!data) return
+          setShipment(data)
+          if (data.status === 'DELIVERED' || data.status === 'CANCELLED') stopped = true
+        })
+        .catch(() => { stopped = true })
+    }
+    loadShip()
+    const timer = setInterval(() => { if (!stopped) loadShip() }, 4000)
+    return () => clearInterval(timer)
   }, [user?.userId, orderNumber])
 
   async function exportOrder(format) {
@@ -44,6 +66,19 @@ export default function OrderDetail() {
       setMsg(e.message)
     } finally {
       setExporting('')
+    }
+  }
+
+  async function emailOrder() {
+    setMsg('')
+    setEmailing(true)
+    try {
+      const result = await api(`/api/orders/${orderNumber}/email`, { method: 'POST' })
+      setMsg(result.message || `Order details emailed to ${user.email}`)
+    } catch (e) {
+      setMsg(e.message)
+    } finally {
+      setEmailing(false)
     }
   }
 
@@ -107,6 +142,17 @@ export default function OrderDetail() {
               <b>{formatMoney(Number(item.unitPrice) * item.quantity)}</b>
             </div>
           ))}
+          {shipment && (
+            <div style={{ marginTop: 22 }}>
+              <h3 style={{ marginBottom: 12 }}>Shipment</h3>
+              <ShipmentTracker shipment={shipment} />
+              {shipment.trackingNumber && (
+                <Link className="link-btn" to={`/shipments/${shipment.trackingNumber}`} style={{ display: 'inline-block', marginTop: 12 }}>
+                  Open live tracking
+                </Link>
+              )}
+            </div>
+          )}
         </div>
         <aside className="summary">
           <h3>Payment</h3>
@@ -123,11 +169,14 @@ export default function OrderDetail() {
             <button className="btn outline full" disabled={!!exporting} onClick={() => exportOrder('excel')}>
               {exporting === 'excel' ? 'Preparing Excel...' : 'Download Excel'}
             </button>
+            <button className="btn full" disabled={emailing} onClick={emailOrder}>
+              {emailing ? 'Sending email...' : `Email details to ${user.email}`}
+            </button>
           </div>
           {order.status === 'SUCCESS' && (
-            <button className="btn full" style={{ marginTop: 12 }} onClick={buyAgain}>Buy again</button>
+            <button className="btn outline full" style={{ marginTop: 12 }} onClick={buyAgain}>Buy again</button>
           )}
-          {msg && <p className={msg.includes('cart') ? 'toast-ok' : 'error'} style={{ marginTop: 10 }}>{msg}</p>}
+          {msg && <p className={msg.toLowerCase().includes('email') || msg.includes('cart') ? 'toast-ok' : 'error'} style={{ marginTop: 10 }}>{msg}</p>}
           <Link className="link-btn" to="/orders" style={{ display: 'block', marginTop: 12, textAlign: 'center' }}>Back to orders</Link>
         </aside>
       </div>

@@ -1,12 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
     <property name="LOG_DIR" value="logs"/>
-    <property name="PATTERN"
-              value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%X{requestId:--}] userId=%X{userId:-anonymous} email=%X{userEmail:--} name=%X{userName:--} role=%X{userRole:--} %logger{40} - %msg%n"/>
+    <springProperty name="CONSOLE_LOG_PATTERN" source="logging.pattern.console"
+                    defaultValue="%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%X{requestId:--}] userId=%X{userId:-anonymous} email=%X{userEmail:--} name=%X{userName:--} role=%X{userRole:--} %logger{36} - %msg%n"/>
+    <springProperty name="FILE_LOG_PATTERN" source="logging.pattern.file"
+                    defaultValue="%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%X{requestId:--}] userId=%X{userId:-anonymous} email=%X{userEmail:--} name=%X{userName:--} role=%X{userRole:--} %logger{36} - %msg%n"/>
 
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
-        <encoder>
-            <pattern>${PATTERN}</pattern>
+        <target>System.out</target>
+        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+            <charset>UTF-8</charset>
+            <pattern>${CONSOLE_LOG_PATTERN}</pattern>
         </encoder>
     </appender>
 
@@ -18,8 +22,9 @@
             <maxHistory>14</maxHistory>
             <totalSizeCap>200MB</totalSizeCap>
         </rollingPolicy>
-        <encoder>
-            <pattern>${PATTERN}</pattern>
+        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+            <charset>UTF-8</charset>
+            <pattern>${FILE_LOG_PATTERN}</pattern>
         </encoder>
     </appender>
 

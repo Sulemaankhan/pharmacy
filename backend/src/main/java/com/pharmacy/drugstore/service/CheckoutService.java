@@ -7,6 +7,7 @@ import com.pharmacy.drugstore.entity.CustomerOrder;
 import com.pharmacy.drugstore.entity.OrderItem;
 import com.pharmacy.drugstore.entity.PaymentTransaction;
 import com.pharmacy.drugstore.entity.Product;
+import com.pharmacy.drugstore.entity.Shipment;
 import com.pharmacy.drugstore.entity.User;
 import com.pharmacy.drugstore.notification.NotificationFactory;
 import com.pharmacy.drugstore.notification.NotificationKind;
@@ -26,8 +27,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.server.ResponseStatusException;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -53,6 +52,7 @@ public class CheckoutService {
     private final PaymentStrategyRegistry strategies;
     private final LedgerPostingService ledger;
     private final NotificationFactory notifications;
+    private final ShipmentService shipments;
 
     public CheckoutService(
             CartItemRepository cartItems,
@@ -61,7 +61,8 @@ public class CheckoutService {
             ProductRepository products,
             PaymentStrategyRegistry strategies,
             LedgerPostingService ledger,
-            NotificationFactory notifications) {
+            NotificationFactory notifications,
+            ShipmentService shipments) {
         this.cartItems = cartItems;
         this.orders = orders;
         this.transactions = transactions;
@@ -69,6 +70,7 @@ public class CheckoutService {
         this.strategies = strategies;
         this.ledger = ledger;
         this.notifications = notifications;
+        this.shipments = shipments;
     }
 
     @Transactional(rollbackFor = Exception.class, isolation = Isolation.REPEATABLE_READ)
@@ -80,6 +82,7 @@ public class CheckoutService {
             log.warn("Checkout aborted empty cart {}", RequestMdc.describe(user));
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Your cart is empty");
         }
+        shipments.requireDelivery(request, user);
 
         PaymentMode mode = parseMode(request == null ? null : request.paymentMode());
         Map<Long, Product> locked = lockStock(cart);
@@ -115,6 +118,7 @@ public class CheckoutService {
             order.getItems().add(line);
         }
         orders.saveAndFlush(order);
+        shipments.attach(order, user, request);
         log.info("Checkout order created {} orderNumber={} items={} subtotal={} shipping={} total={}",
                 RequestMdc.describe(user), order.getOrderNumber(), order.getItems().size(), subtotal, shipping, total);
 
@@ -138,12 +142,15 @@ public class CheckoutService {
         if (!outcome.success()) {
             txn.setStatus(PaymentStatus.FAILED);
             order.setStatus(PaymentStatus.FAILED);
+            shipments.markPaymentResult(order.getShipment(), false);
             transactions.saveAndFlush(txn);
             orders.saveAndFlush(order);
-            queueNotification(NotificationKind.PAYMENT_FAILURE, user, order, txn);
-            log.warn("Checkout failed {} orderNumber={} txn={}",
-                    RequestMdc.describe(user), order.getOrderNumber(), txn.getTransactionRef());
-            return toResponse(false, order, txn, outcome.message(), "QUEUED");
+            String emailStatus = sendOrderNotification(NotificationKind.PAYMENT_FAILURE, user, order, txn);
+            log.warn("Checkout failed {} orderNumber={} txn={} email={}",
+                    RequestMdc.describe(user), order.getOrderNumber(), txn.getTransactionRef(), emailStatus);
+            return toResponse(false, order, txn,
+                    outcome.message() + " " + emailPhrase(emailStatus, recipients(user, order)),
+                    emailStatus);
         }
 
         if (outcome.gatewayRef() != null) {
@@ -151,6 +158,7 @@ public class CheckoutService {
         }
         txn.setStatus(PaymentStatus.SUCCESS);
         order.setStatus(PaymentStatus.SUCCESS);
+        shipments.markPaymentResult(order.getShipment(), true);
         ledger.post(txn);
 
         for (CartItem item : cart) {
@@ -162,26 +170,53 @@ public class CheckoutService {
         transactions.saveAndFlush(txn);
         orders.saveAndFlush(order);
 
-        queueNotification(NotificationKind.PAYMENT_SUCCESS, user, order, txn);
-        log.info("Checkout success {} orderNumber={} txn={} ledgerPosted={}",
-                RequestMdc.describe(user), order.getOrderNumber(), txn.getTransactionRef(), txn.isLedgerPosted());
-        return toResponse(true, order, txn, "Payment posted to ledger. Confirmation will be emailed to " + user.getEmail(),
-                "QUEUED");
+        String emailStatus = sendOrderNotification(NotificationKind.PAYMENT_SUCCESS, user, order, txn);
+        log.info("Checkout success {} orderNumber={} txn={} ledgerPosted={} email={}",
+                RequestMdc.describe(user), order.getOrderNumber(), txn.getTransactionRef(), txn.isLedgerPosted(), emailStatus);
+        return toResponse(true, order, txn,
+                "Payment posted to ledger. " + emailPhrase(emailStatus, recipients(user, order)),
+                emailStatus);
     }
 
+    @Transactional
     public List<CustomerOrder> history(User user) {
         List<CustomerOrder> list = orders.findByUserIdOrderByCreatedAtDesc(user.getId());
+        list.forEach(order -> shipments.refresh(order.getShipment()));
         log.info("Order history {} count={}", RequestMdc.describe(user), list.size());
         return list;
     }
 
+    @Transactional
     public CustomerOrder get(User user, String orderNumber) {
         log.info("Order get {} orderNumber={}", RequestMdc.describe(user), orderNumber);
-        return orders.findByOrderNumberAndUserId(orderNumber, user.getId())
+        CustomerOrder order = orders.findByOrderNumberAndUserId(orderNumber, user.getId())
                 .orElseThrow(() -> {
                     log.warn("Order not found {} orderNumber={}", RequestMdc.describe(user), orderNumber);
                     return new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found");
                 });
+        shipments.refresh(order.getShipment());
+        return order;
+    }
+
+    public Map<String, String> emailDetails(User user, String orderNumber) {
+        if (user.getEmail() == null || user.getEmail().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Your account does not have an email ID");
+        }
+        CustomerOrder order = get(user, orderNumber);
+        log.info("Order email {} orderNumber={} to={}",
+                RequestMdc.describe(user), order.getOrderNumber(), user.getEmail());
+        notifications.create(NotificationKind.ORDER_DETAILS).send(user, order, order.getPayment());
+        String recipient = user.getEmail();
+        if (order.getShipment() != null && order.getShipment().getEmail() != null
+                && !order.getShipment().getEmail().isBlank()
+                && !order.getShipment().getEmail().equalsIgnoreCase(user.getEmail())) {
+            recipient = user.getEmail() + " and " + order.getShipment().getEmail();
+        }
+        return Map.of(
+                "status", "SENT",
+                "recipient", recipient,
+                "orderNumber", order.getOrderNumber(),
+                "message", "Order details were emailed to " + recipient);
     }
 
     public PaymentTransaction getTransaction(String ref) {
@@ -194,15 +229,34 @@ public class CheckoutService {
         return products.lockAllById(ids).stream().collect(Collectors.toMap(Product::getId, Function.identity()));
     }
 
-    private void queueNotification(NotificationKind kind, User user, CustomerOrder order, PaymentTransaction txn) {
-        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-            @Override
-            public void afterCommit() {
-                log.info("Notification send {} kind={} orderNumber={} to={}",
-                        RequestMdc.describe(user), kind, order.getOrderNumber(), user.getEmail());
-                notifications.create(kind).send(user, order, txn);
-            }
-        });
+    private String sendOrderNotification(NotificationKind kind, User user, CustomerOrder order, PaymentTransaction txn) {
+        try {
+            log.info("Notification send {} kind={} orderNumber={} to={}",
+                    RequestMdc.describe(user), kind, order.getOrderNumber(), user.getEmail());
+            notifications.create(kind).send(user, order, txn);
+            return "SENT";
+        } catch (Exception ex) {
+            log.warn("Notification failed {} kind={} orderNumber={} reason={}",
+                    RequestMdc.describe(user), kind, order.getOrderNumber(), ex.getMessage());
+            return "FAILED";
+        }
+    }
+
+    private static String recipients(User user, CustomerOrder order) {
+        String account = user.getEmail();
+        if (order.getShipment() != null && order.getShipment().getEmail() != null
+                && !order.getShipment().getEmail().isBlank()
+                && !order.getShipment().getEmail().equalsIgnoreCase(account)) {
+            return account + " and " + order.getShipment().getEmail().trim();
+        }
+        return account;
+    }
+
+    private static String emailPhrase(String emailStatus, String email) {
+        if ("SENT".equals(emailStatus)) {
+            return "A notification was emailed to " + email + ".";
+        }
+        return "We could not email a notification to " + email + ". Use Email order details to retry.";
     }
 
     private PaymentMode parseMode(String raw) {
@@ -226,6 +280,7 @@ public class CheckoutService {
         List<PaymentResponse.Item> items = order.getItems().stream()
                 .map(i -> new PaymentResponse.Item(i.getProductName(), i.getQuantity(), i.getUnitPrice()))
                 .toList();
+        Shipment shipment = order.getShipment();
         return new PaymentResponse(
                 success,
                 order.getId(),
@@ -239,6 +294,11 @@ public class CheckoutService {
                 message,
                 emailStatus,
                 txn.getCompletedAt(),
-                items);
+                items,
+                shipment == null ? null : shipment.getTrackingNumber(),
+                shipment == null ? null : shipment.getRecipientName(),
+                shipment == null ? null : shipment.getFullAddress(),
+                shipment == null ? null : shipment.getContactNumber(),
+                shipment == null ? null : shipment.getEmail());
     }
 }

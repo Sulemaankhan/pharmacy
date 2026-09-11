@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useStore } from '../store'
-import { downloadFile } from '../api'
+import { downloadFile, api } from '../api'
 import { formatMoney } from '../money'
 
 function formatDate(iso) {
@@ -20,6 +20,8 @@ export default function Orders() {
   const [filter, setFilter] = useState('ALL')
   const [error, setError] = useState('')
   const [exporting, setExporting] = useState('')
+  const [emailing, setEmailing] = useState('')
+  const [emailMsg, setEmailMsg] = useState('')
 
   const mine = useMemo(
     () => orders.filter((o) => o.userId == null || Number(o.userId) === Number(user?.userId)),
@@ -30,6 +32,20 @@ export default function Orders() {
     if (filter === 'ALL') return mine
     return mine.filter((o) => o.status === filter)
   }, [mine, filter])
+
+  async function emailOrder(orderNumber) {
+    setError('')
+    setEmailMsg('')
+    setEmailing(orderNumber)
+    try {
+      const result = await api(`/api/orders/${orderNumber}/email`, { method: 'POST' })
+      setEmailMsg(result.message || `Order details emailed to ${user.email}`)
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setEmailing('')
+    }
+  }
 
   async function exportHistory(format) {
     setError('')
@@ -83,6 +99,7 @@ export default function Orders() {
       </div>
 
       {error && <p className="error">{error}</p>}
+      {emailMsg && <p className="toast-ok" style={{ marginBottom: 12 }}>{emailMsg}</p>}
       {list.length === 0 && (
         <div className="empty">
           <p>No orders in this view yet.</p>
@@ -111,7 +128,19 @@ export default function Orders() {
                 <div className="muted">{order.payment?.paymentMode || '—'}</div>
                 <strong>{formatMoney(order.total)}</strong>
               </div>
-              <Link className="btn outline" to={`/orders/${order.orderNumber}`}>View details</Link>
+              <div className="export-actions">
+                <button
+                  className="btn outline"
+                  disabled={!!emailing}
+                  onClick={() => emailOrder(order.orderNumber)}
+                >
+                  {emailing === order.orderNumber ? 'Sending...' : 'Email'}
+                </button>
+                {order.shipment?.trackingNumber && (
+                  <Link className="btn outline" to={`/shipments/${order.shipment.trackingNumber}`}>Track</Link>
+                )}
+                <Link className="btn outline" to={`/orders/${order.orderNumber}`}>View details</Link>
+              </div>
             </div>
           </article>
         ))}

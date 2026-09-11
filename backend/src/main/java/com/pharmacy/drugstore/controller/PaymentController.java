@@ -3,10 +3,12 @@ package com.pharmacy.drugstore.controller;
 import com.pharmacy.drugstore.dto.PaymentRequest;
 import com.pharmacy.drugstore.dto.PaymentResponse;
 import com.pharmacy.drugstore.entity.CustomerOrder;
+import com.pharmacy.drugstore.entity.Shipment;
 import com.pharmacy.drugstore.entity.User;
 import com.pharmacy.drugstore.payment.PaymentMode;
 import com.pharmacy.drugstore.service.AuthService;
 import com.pharmacy.drugstore.service.CheckoutService;
+import com.pharmacy.drugstore.service.ShipmentService;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -19,10 +21,12 @@ import java.util.Map;
 @RequestMapping("/api")
 public class PaymentController {
     private final CheckoutService checkoutService;
+    private final ShipmentService shipmentService;
     private final AuthService authService;
 
-    public PaymentController(CheckoutService checkoutService, AuthService authService) {
+    public PaymentController(CheckoutService checkoutService, ShipmentService shipmentService, AuthService authService) {
         this.checkoutService = checkoutService;
+        this.shipmentService = shipmentService;
         this.authService = authService;
     }
 
@@ -49,6 +53,26 @@ public class PaymentController {
     @GetMapping("/orders/{orderNumber}")
     public CustomerOrder order(Authentication auth, @PathVariable String orderNumber) {
         return checkoutService.get(user(auth), orderNumber);
+    }
+
+    @GetMapping("/shipments")
+    public List<Shipment> shipments(Authentication auth) {
+        return shipmentService.list(user(auth));
+    }
+
+    @GetMapping("/shipments/{trackingNumber}")
+    public Shipment shipment(Authentication auth, @PathVariable String trackingNumber) {
+        return shipmentService.getByTracking(user(auth), trackingNumber);
+    }
+
+    @GetMapping("/orders/{orderNumber}/shipment")
+    public Shipment orderShipment(Authentication auth, @PathVariable String orderNumber) {
+        return shipmentService.getByOrder(user(auth), orderNumber);
+    }
+
+    @PostMapping("/orders/{orderNumber}/email")
+    public Map<String, String> emailOrder(Authentication auth, @PathVariable String orderNumber) {
+        return checkoutService.emailDetails(user(auth), orderNumber);
     }
 
     @GetMapping("/payments/transactions/{ref}")

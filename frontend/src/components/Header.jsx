@@ -39,6 +39,7 @@ export default function Header() {
                 <>
                   <span>Hi, {user.name}</span>
                   <Link to="/orders">Orders</Link>
+                  <Link to="/shipments">Shipments</Link>
                   <button type="button" className="link-btn" onClick={handleLogout}>Logout</button>
                 </>
               ) : (
@@ -111,6 +112,7 @@ export default function Header() {
             <NavLink to="/" end>Home</NavLink>
             <NavLink to="/shop">Shop</NavLink>
             {user && <NavLink to="/orders">Orders</NavLink>}
+            {user && <NavLink to="/shipments">Shipments</NavLink>}
             <NavLink to="/about">About Us</NavLink>
             <NavLink to="/contact">Contact Us</NavLink>
           </div>
@@ -123,6 +125,7 @@ export default function Header() {
           <Link to="/" onClick={() => setOpen(false)}>Home</Link>
           <Link to="/shop" onClick={() => setOpen(false)}>Shop</Link>
           {user && <Link to="/orders" onClick={() => setOpen(false)}>Orders</Link>}
+          {user && <Link to="/shipments" onClick={() => setOpen(false)}>Shipments</Link>}
           <Link to="/about" onClick={() => setOpen(false)}>About</Link>
           <Link to="/contact" onClick={() => setOpen(false)}>Contact</Link>
           {user ? (

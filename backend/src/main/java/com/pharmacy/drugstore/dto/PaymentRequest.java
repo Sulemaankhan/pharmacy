@@ -9,5 +9,12 @@ public record PaymentRequest(
         String cvv,
         String bankName,
         String walletProvider,
-        String walletPhone
+        String walletPhone,
+        String recipientName,
+        String address,
+        String city,
+        String state,
+        String pincode,
+        String contactNumber,
+        String email
 ) {}

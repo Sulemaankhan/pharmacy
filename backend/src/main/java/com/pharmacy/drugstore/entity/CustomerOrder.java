@@ -43,6 +43,9 @@ public class CustomerOrder {
     @OneToOne(mappedBy = "order", cascade = CascadeType.ALL)
     private PaymentTransaction payment;
 
+    @OneToOne(mappedBy = "order", cascade = CascadeType.ALL)
+    private Shipment shipment;
+
     public Long getId() { return id; }
     public String getOrderNumber() { return orderNumber; }
     public void setOrderNumber(String orderNumber) { this.orderNumber = orderNumber; }
@@ -62,4 +65,6 @@ public class CustomerOrder {
     public void setItems(List<OrderItem> items) { this.items = items; }
     public PaymentTransaction getPayment() { return payment; }
     public void setPayment(PaymentTransaction payment) { this.payment = payment; }
+    public Shipment getShipment() { return shipment; }
+    public void setShipment(Shipment shipment) { this.shipment = shipment; }
 }

@@ -19,7 +19,12 @@ public record PaymentResponse(
         String message,
         String emailStatus,
         Instant paidAt,
-        List<Item> items
+        List<Item> items,
+        String trackingNumber,
+        String recipientName,
+        String address,
+        String contactNumber,
+        String deliveryEmail
 ) {
     public record Item(String name, int quantity, BigDecimal unitPrice) {}
 }

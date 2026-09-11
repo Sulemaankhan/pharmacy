@@ -18,6 +18,7 @@ public class NotificationFactory {
         return switch (kind) {
             case PAYMENT_SUCCESS -> new PaymentSuccessEmailNotification(mailClient);
             case PAYMENT_FAILURE -> new PaymentFailureEmailNotification(mailClient);
+            case ORDER_DETAILS -> new OrderDetailsEmailNotification(mailClient);
         };
     }
 }

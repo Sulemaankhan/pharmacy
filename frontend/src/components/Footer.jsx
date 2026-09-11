@@ -47,6 +47,7 @@ export default function Footer() {
               {user ? (
                 <>
                   <Link to="/orders">Order history</Link>
+                  <Link to="/shipments">Shipments</Link>
                   <Link to="/cart">Cart</Link>
                   <button type="button" className="link-btn footer-logout" onClick={handleLogout}>Logout</button>
                 </>

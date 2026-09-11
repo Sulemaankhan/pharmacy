@@ -9,11 +9,11 @@ export function Icon({ d, size = 20 }) {
 export function LogoMark() {
   return (
     <svg className="logo-svg" viewBox="0 0 48 48" aria-hidden="true">
-      <circle cx="24" cy="24" r="23" fill="#e8f3ff" />
-      <path d="M16 22c0-6 4.5-10 10.5-10 5 0 8.5 3.2 9.5 7.5" fill="none" stroke="#1e5bd6" strokeWidth="2.4" strokeLinecap="round" />
-      <circle cx="36" cy="20" r="2.4" fill="#1e5bd6" />
-      <rect x="10" y="20" width="20" height="11" rx="5.5" fill="#1e5bd6" />
-      <rect x="19" y="20" width="11" height="11" rx="5.5" fill="#111827" />
+      <circle cx="24" cy="24" r="23" fill="#d7eedf" />
+      <path d="M16 22c0-6 4.5-10 10.5-10 5 0 8.5 3.2 9.5 7.5" fill="none" stroke="#0e6b36" strokeWidth="2.4" strokeLinecap="round" />
+      <circle cx="36" cy="20" r="2.4" fill="#9b1d4a" />
+      <rect x="10" y="20" width="20" height="11" rx="5.5" fill="#0e6b36" />
+      <rect x="19" y="20" width="11" height="11" rx="5.5" fill="#9b1d4a" />
       <circle cx="16" cy="25.5" r="1.6" fill="#fff" />
     </svg>
   )

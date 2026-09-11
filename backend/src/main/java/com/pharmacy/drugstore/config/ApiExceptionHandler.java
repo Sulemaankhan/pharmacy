@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 import java.util.Map;
 
 @RestControllerAdvice
@@ -18,6 +19,12 @@ public class ApiExceptionHandler {
         log.warn("API status={} reason={}", ex.getStatusCode().value(), ex.getReason());
         String message = ex.getReason() == null ? "Request failed" : ex.getReason();
         return ResponseEntity.status(ex.getStatusCode()).body(Map.of("message", message));
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<Map<String, String>> missing(NoResourceFoundException ex) {
+        log.warn("API missing resource {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Not found"));
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

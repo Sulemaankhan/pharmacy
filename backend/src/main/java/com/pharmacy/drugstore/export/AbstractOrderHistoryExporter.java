@@ -53,6 +53,31 @@ public abstract class AbstractOrderHistoryExporter implements OrderHistoryExport
         return DateTimeFormatter.ofPattern("yyyyMMdd-HHmm").withZone(IST).format(java.time.Instant.now());
     }
 
+    protected String shipAddress(CustomerOrder order) {
+        if (order.getShipment() == null) {
+            return "-";
+        }
+        return order.getShipment().getFullAddress();
+    }
+
+    protected String shipContact(CustomerOrder order) {
+        return order.getShipment() == null || order.getShipment().getContactNumber() == null
+                ? "-"
+                : order.getShipment().getContactNumber();
+    }
+
+    protected String shipEmail(CustomerOrder order) {
+        return order.getShipment() == null || order.getShipment().getEmail() == null
+                ? "-"
+                : order.getShipment().getEmail();
+    }
+
+    protected String trackingNumber(CustomerOrder order) {
+        return order.getShipment() == null || order.getShipment().getTrackingNumber() == null
+                ? "-"
+                : order.getShipment().getTrackingNumber();
+    }
+
     protected BigDecimal lineAmount(OrderItem item) {
         if (item.getUnitPrice() == null) {
             return BigDecimal.ZERO;

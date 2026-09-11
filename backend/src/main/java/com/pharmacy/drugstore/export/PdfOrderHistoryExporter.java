@@ -52,9 +52,9 @@ public class PdfOrderHistoryExporter extends AbstractOrderHistoryExporter {
                     metaFont));
             document.add(new Paragraph(" "));
 
-            PdfPTable table = new PdfPTable(new float[]{2.1f, 2.2f, 1.3f, 1.5f, 1.7f, 1.3f, 1.3f, 4.2f});
+            PdfPTable table = new PdfPTable(new float[]{2.0f, 1.8f, 1.1f, 1.3f, 1.7f, 2.4f, 1.5f, 2.0f, 1.2f});
             table.setWidthPercentage(100);
-            String[] headers = {"Order", "Placed", "Status", "Payment", "Txn ref", "Items", "Total (INR)", "Products"};
+            String[] headers = {"Order", "Placed", "Status", "Payment", "Tracking", "Address", "Contact", "Email", "Total"};
             for (String header : headers) {
                 table.addCell(headerCell(header, headFont));
             }
@@ -65,10 +65,11 @@ public class PdfOrderHistoryExporter extends AbstractOrderHistoryExporter {
                 table.addCell(bodyCell(order.getCreatedAt() == null ? "-" : DATE_TIME.format(order.getCreatedAt()), cellFont));
                 table.addCell(bodyCell(order.getStatus() == null ? "-" : order.getStatus().name(), cellFont));
                 table.addCell(bodyCell(paymentMode(order), cellFont));
-                table.addCell(bodyCell(txnRef(order), cellFont));
-                table.addCell(bodyCell(String.valueOf(order.getItems() == null ? 0 : order.getItems().size()), cellFont));
+                table.addCell(bodyCell(trackingNumber(order), cellFont));
+                table.addCell(bodyCell(shipAddress(order), cellFont));
+                table.addCell(bodyCell(shipContact(order), cellFont));
+                table.addCell(bodyCell(shipEmail(order), cellFont));
                 table.addCell(bodyCell(money(order.getTotal()), boldFont));
-                table.addCell(bodyCell(itemsSummary(order), cellFont));
                 if (order.getTotal() != null) {
                     grandTotal = grandTotal.add(order.getTotal());
                 }
@@ -76,7 +77,7 @@ public class PdfOrderHistoryExporter extends AbstractOrderHistoryExporter {
 
             if (orders.isEmpty()) {
                 PdfPCell empty = new PdfPCell(new Phrase("No orders found for this account.", cellFont));
-                empty.setColspan(8);
+                empty.setColspan(9);
                 empty.setPadding(10);
                 empty.setHorizontalAlignment(Element.ALIGN_CENTER);
                 table.addCell(empty);

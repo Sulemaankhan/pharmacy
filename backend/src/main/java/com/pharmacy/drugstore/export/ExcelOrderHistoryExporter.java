@@ -53,6 +53,7 @@ public class ExcelOrderHistoryExporter extends AbstractOrderHistoryExporter {
             Row headerRow = summary.createRow(rowIdx++);
             String[] columns = {
                     "Order number", "Placed at", "Status", "Payment mode", "Transaction ref",
+                    "Tracking", "Address", "Contact", "Email",
                     "Items", "Subtotal (INR)", "Shipping (INR)", "Total (INR)", "Products"
             };
             for (int i = 0; i < columns.length; i++) {
@@ -69,19 +70,23 @@ public class ExcelOrderHistoryExporter extends AbstractOrderHistoryExporter {
                 writeText(row, 2, order.getStatus() == null ? "-" : order.getStatus().name(), text);
                 writeText(row, 3, paymentMode(order), text);
                 writeText(row, 4, txnRef(order), text);
-                writeNumber(row, 5, order.getItems() == null ? 0 : order.getItems().size(), text);
-                writeMoney(row, 6, order.getSubtotal(), money);
-                writeMoney(row, 7, order.getShipping(), money);
-                writeMoney(row, 8, order.getTotal(), money);
-                writeText(row, 9, itemsSummary(order), text);
+                writeText(row, 5, trackingNumber(order), text);
+                writeText(row, 6, shipAddress(order), text);
+                writeText(row, 7, shipContact(order), text);
+                writeText(row, 8, shipEmail(order), text);
+                writeNumber(row, 9, order.getItems() == null ? 0 : order.getItems().size(), text);
+                writeMoney(row, 10, order.getSubtotal(), money);
+                writeMoney(row, 11, order.getShipping(), money);
+                writeMoney(row, 12, order.getTotal(), money);
+                writeText(row, 13, itemsSummary(order), text);
                 if (order.getTotal() != null) {
                     grandTotal = grandTotal.add(order.getTotal());
                 }
             }
 
             Row totalRow = summary.createRow(rowIdx);
-            writeText(totalRow, 7, "Grand total", header);
-            writeMoney(totalRow, 8, grandTotal, money);
+            writeText(totalRow, 11, "Grand total", header);
+            writeMoney(totalRow, 12, grandTotal, money);
 
             for (int i = 0; i < columns.length; i++) {
                 summary.autoSizeColumn(i);

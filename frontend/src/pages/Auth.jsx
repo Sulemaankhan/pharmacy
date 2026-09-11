@@ -28,6 +28,7 @@ export default function Auth() {
           <h2>Your account</h2>
           <p className="lead">Signed in as <b>{user.name}</b><br />{user.email}</p>
           <Link className="btn full" to="/orders">View order history</Link>
+          <Link className="btn outline full" to="/shipments" style={{ marginTop: 10 }}>Track shipments</Link>
           <button type="button" className="btn outline full" style={{ marginTop: 10 }} onClick={() => { logout(); navigate('/auth') }}>Logout</button>
         </div>
       </div>

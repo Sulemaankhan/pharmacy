@@ -13,6 +13,8 @@ import Auth from './pages/Auth'
 import Wishlist from './pages/Wishlist'
 import About from './pages/About'
 import Contact from './pages/Contact'
+import Shipments from './pages/Shipments'
+import ShipmentDetail from './pages/ShipmentDetail'
 import { StoreProvider } from './store'
 
 export default function App() {
@@ -28,6 +30,8 @@ export default function App() {
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/orders" element={<Orders />} />
           <Route path="/orders/:orderNumber" element={<OrderDetail />} />
+          <Route path="/shipments" element={<Shipments />} />
+          <Route path="/shipments/:trackingNumber" element={<ShipmentDetail />} />
           <Route path="/order/:orderNumber" element={<OrderSuccess />} />
           <Route path="/wishlist" element={<Wishlist />} />
           <Route path="/auth" element={<Auth />} />
