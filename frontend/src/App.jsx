@@ -3,6 +3,8 @@ import Header from './components/Header'
 import Footer from './components/Footer'
 import Home from './pages/Home'
 import Shop from './pages/Shop'
+import LabReports from './pages/LabReports'
+import HealthReport from './pages/HealthReport'
 import ProductPage from './pages/Product'
 import Cart from './pages/Cart'
 import Checkout from './pages/Checkout'
@@ -28,6 +30,8 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/shop" element={<Shop />} />
+          <Route path="/health-report" element={<HealthReport />} />
+          <Route path="/lab-reports" element={<LabReports />} />
           <Route path="/product/:id" element={<ProductPage />} />
           <Route path="/cart" element={<Cart />} />
           <Route path="/checkout" element={<Checkout />} />

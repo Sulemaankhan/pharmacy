@@ -2,6 +2,7 @@ import { useEffect, useMemo } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import ProductCard from '../components/ProductCard'
 import { useStore } from '../store'
+import { isLabProduct, isShopCategory } from '../labReports'
 
 export default function Shop() {
   const { products, categories, loadingCatalog, catalogError, refreshCatalog, setQuery } = useStore()
@@ -9,7 +10,8 @@ export default function Shop() {
   const q = params.get('q') || ''
   const categoryId = params.get('category')
   const dealsOnly = params.get('deals') === '1'
-  const activeCategory = categories.find((c) => String(c.id) === categoryId)
+  const shopCategories = categories.filter(isShopCategory)
+  const activeCategory = shopCategories.find((c) => String(c.id) === categoryId)
 
   useEffect(() => {
     if (products.length === 0) refreshCatalog().catch(() => {})
@@ -17,9 +19,10 @@ export default function Shop() {
 
   const list = useMemo(() => {
     return products.filter((p) => {
+      if (isLabProduct(p) && !q) return false
       if (dealsOnly && !p.dealOfTheDay) return false
       if (categoryId && String(p.category?.id) !== categoryId) return false
-      if (q && !`${p.name || ''} ${p.brand || ''}`.toLowerCase().includes(q.toLowerCase())) return false
+      if (q && !`${p.name || ''} ${p.brand || ''} ${p.labPanel || ''}`.toLowerCase().includes(q.toLowerCase())) return false
       return true
     })
   }, [products, q, categoryId, dealsOnly])
@@ -43,7 +46,7 @@ export default function Shop() {
       <aside className="side">
         <h3>Categories</h3>
         <button className={!categoryId ? 'active' : ''} onClick={() => setCategory(null)}>All products</button>
-        {categories.map((c) => (
+        {shopCategories.map((c) => (
           <button key={c.id} className={String(c.id) === categoryId ? 'active' : ''} onClick={() => setCategory(String(c.id))}>
             {c.name}
           </button>

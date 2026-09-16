@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { useStore } from '../store'
 import { formatMoney } from '../money'
 import ProductCard from '../components/ProductCard'
+import { isLabProduct, panelLabel } from '../labReports'
 
 export default function ProductPage() {
   const { id } = useParams()
@@ -10,21 +11,31 @@ export default function ProductPage() {
   const product = products.find((p) => String(p.id) === id)
   const [qty, setQty] = useState(1)
   const [msg, setMsg] = useState('')
-  const related = products.filter((p) => p.category?.id === product?.category?.id && p.id !== product?.id).slice(0, 4)
+  const related = products.filter((p) => {
+    if (!product || p.id === product.id) return false
+    if (isLabProduct(product)) return p.labPanel === product.labPanel
+    return !isLabProduct(p) && p.category?.id === product.category?.id
+  }).slice(0, 4)
 
   if (!product) return <div className="container page">Product not found.</div>
   const off = product.compareAtPrice ? Math.round((1 - Number(product.price) / Number(product.compareAtPrice)) * 100) : 0
 
   return (
     <div className="container page">
-      <p className="crumb">Home / Shop / {product.name}</p>
+      <p className="crumb">
+        Home / {isLabProduct(product)
+          ? <Link to={`/lab-reports?panel=${product.labPanel}`}>Lab Reports / {panelLabel(product.labPanel)}</Link>
+          : <Link to="/shop">Shop</Link>} / {product.name}
+      </p>
       <div className="detail">
         <div className="detail-img">
           {off > 0 && <span className="sale-tag">-{off}%</span>}
           <img src={product.imageUrl} alt={product.name} />
         </div>
         <div>
-          <div className="muted">{product.brand} · {product.category?.name}</div>
+          <div className="muted">
+            {product.brand} · {isLabProduct(product) ? `${panelLabel(product.labPanel)} lab test` : product.category?.name}
+          </div>
           <h2 style={{ margin: '8px 0 10px' }}>{product.name}</h2>
           <div className="stars">★ {product.rating} ({product.reviewCount} reviews)</div>
           <div className="stock">In stock · {product.stock} units</div>
@@ -58,7 +69,10 @@ export default function ProductPage() {
       </div>
       {related.length > 0 && (
         <section className="section" style={{ paddingTop: 40 }}>
-          <div className="section-head"><h2>Related products</h2><Link className="link-btn" to="/shop">View all</Link></div>
+          <div className="section-head">
+            <h2>{isLabProduct(product) ? 'Related lab tests' : 'Related products'}</h2>
+            <Link className="link-btn" to={isLabProduct(product) ? `/lab-reports?panel=${product.labPanel}` : '/shop'}>View all</Link>
+          </div>
           <div className="grid">
             {related.map((p) => <ProductCard key={p.id} product={p} />)}
           </div>

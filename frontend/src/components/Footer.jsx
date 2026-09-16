@@ -34,6 +34,8 @@ export default function Footer() {
               <h3>Shop</h3>
               <Link to="/shop">All products</Link>
               <Link to="/shop?deals=1">Deals of the day</Link>
+              <Link to="/lab-reports">Lab Reports</Link>
+              <Link to="/health-report">Health Report</Link>
               {user && <Link to="/wishlist">Wishlist</Link>}
             </div>
             <div>
@@ -47,6 +49,7 @@ export default function Footer() {
               {user ? (
                 <>
                   <Link to="/profile">Profile</Link>
+                  <Link to="/health-report">Health Report</Link>
                   <Link to="/orders">Order history</Link>
                   <Link to="/shipments">Shipments</Link>
                   <Link to="/cart">Cart</Link>
@@ -62,7 +65,7 @@ export default function Footer() {
       </footer>
       <nav className="bottom-nav">
         <NavLink to="/shop"><Icon d={paths.shop} size={18} />Shop</NavLink>
-        <NavLink to="/shop?deals=1"><Icon d={paths.flame} size={18} />Hot sale</NavLink>
+        <NavLink to="/lab-reports"><Icon d={paths.flask} size={18} />Labs</NavLink>
         <NavLink to="/" end className="home-pill"><Icon d={paths.home} size={18} />Home</NavLink>
         <NavLink to="/contact"><Icon d={paths.support} size={18} />Contact</NavLink>
         {user

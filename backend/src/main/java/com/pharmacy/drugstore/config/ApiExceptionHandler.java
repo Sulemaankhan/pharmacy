@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 import java.util.Map;
 
@@ -25,6 +26,12 @@ public class ApiExceptionHandler {
     public ResponseEntity<Map<String, String>> missing(NoResourceFoundException ex) {
         log.warn("API missing resource {}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Not found"));
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<Map<String, String>> tooLarge(MaxUploadSizeExceededException ex) {
+        log.warn("API upload too large");
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", "PDF must be 8 MB or smaller"));
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

@@ -132,6 +132,9 @@ export default function Profile() {
               <span>Wishlist</span>
             </Link>
           </div>
+          <p style={{ marginTop: 14 }}>
+            <Link className="link-btn" to="/health-report">Open health report charts</Link>
+          </p>
           {live.lastOrderNumber && (
             <p style={{ marginTop: 14 }}>
               Last order <Link className="link-btn" to={`/orders/${live.lastOrderNumber}`}>{live.lastOrderNumber}</Link>

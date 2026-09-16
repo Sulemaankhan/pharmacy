@@ -3,11 +3,14 @@ import { useState } from 'react'
 import { useStore } from '../store'
 import { formatMoney } from '../money'
 import { Icon, LogoMark, paths } from '../icons'
+import { LAB_PANELS, isShopCategory } from '../labReports'
 
 export default function Header() {
   const { user, cartCount, cartTotal, wishCount, query, setQuery, logout, categories } = useStore()
   const [open, setOpen] = useState(false)
   const [catsOpen, setCatsOpen] = useState(false)
+  const [labsOpen, setLabsOpen] = useState(false)
+  const shopCategories = categories.filter(isShopCategory)
   const navigate = useNavigate()
 
   function search(e) {
@@ -102,7 +105,7 @@ export default function Header() {
             {catsOpen && (
               <div className="cat-drop">
                 <Link to="/shop" onClick={() => setCatsOpen(false)}>All products</Link>
-                {categories.map((c) => (
+                {shopCategories.map((c) => (
                   <Link key={c.id} to={`/shop?category=${c.id}`} onClick={() => setCatsOpen(false)}>{c.name}</Link>
                 ))}
               </div>
@@ -111,6 +114,24 @@ export default function Header() {
           <div className="nav-links">
             <NavLink to="/" end>Home</NavLink>
             <NavLink to="/shop">Shop</NavLink>
+            <NavLink to="/health-report">Health Report</NavLink>
+            <div className="nav-drop-wrap" onMouseLeave={() => setLabsOpen(false)}>
+              <NavLink to="/lab-reports" onMouseEnter={() => setLabsOpen(true)}>Lab Reports</NavLink>
+              {labsOpen && (
+                <div className="cat-drop nav-subdrop">
+                  <Link to="/lab-reports" onClick={() => setLabsOpen(false)}>All lab reports</Link>
+                  {LAB_PANELS.map((panel) => (
+                    <Link
+                      key={panel.id}
+                      to={`/lab-reports?panel=${panel.id}`}
+                      onClick={() => setLabsOpen(false)}
+                    >
+                      {panel.name}
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
             {user && <NavLink to="/profile">Profile</NavLink>}
             {user && <NavLink to="/orders">Orders</NavLink>}
             {user && <NavLink to="/shipments">Shipments</NavLink>}
@@ -125,6 +146,13 @@ export default function Header() {
         <div className="container mobile-menu">
           <Link to="/" onClick={() => setOpen(false)}>Home</Link>
           <Link to="/shop" onClick={() => setOpen(false)}>Shop</Link>
+          <Link to="/health-report" onClick={() => setOpen(false)}>Health Report</Link>
+          <Link to="/lab-reports" onClick={() => setOpen(false)}>Lab Reports</Link>
+          {LAB_PANELS.map((panel) => (
+            <Link key={panel.id} to={`/lab-reports?panel=${panel.id}`} onClick={() => setOpen(false)}>
+              {panel.name}
+            </Link>
+          ))}
           {user && <Link to="/profile" onClick={() => setOpen(false)}>Profile</Link>}
           {user && <Link to="/orders" onClick={() => setOpen(false)}>Orders</Link>}
           {user && <Link to="/shipments" onClick={() => setOpen(false)}>Shipments</Link>}

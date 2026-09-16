@@ -23,6 +23,7 @@ export default function ProductCard({ product }) {
   return (
     <article className="card">
       {off > 0 && <span className="sale-tag">-{off}%</span>}
+      {product.labPanel && <span className="lab-tag">Lab test</span>}
       <Link to={`/product/${product.id}`} className="img-wrap">
         <img src={product.imageUrl} alt={product.name} />
       </Link>

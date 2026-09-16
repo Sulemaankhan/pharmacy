@@ -32,6 +32,9 @@ public class Product {
     private Instant dealEndsAt;
     private boolean featured = false;
 
+    @Column(length = 32)
+    private String labPanel;
+
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "category_id")
     private Category category;
@@ -62,6 +65,8 @@ public class Product {
     public void setDealEndsAt(Instant dealEndsAt) { this.dealEndsAt = dealEndsAt; }
     public boolean isFeatured() { return featured; }
     public void setFeatured(boolean featured) { this.featured = featured; }
+    public String getLabPanel() { return labPanel; }
+    public void setLabPanel(String labPanel) { this.labPanel = labPanel; }
     public Category getCategory() { return category; }
     public void setCategory(Category category) { this.category = category; }
 }

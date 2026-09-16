@@ -3,6 +3,7 @@ import ProductCard from '../components/ProductCard'
 import { useStore } from '../store'
 import { Link } from 'react-router-dom'
 import { Icon, paths } from '../icons'
+import { isShopCategory } from '../labReports'
 
 function Virus({ style }) {
   return (
@@ -50,6 +51,7 @@ const catEmoji = {
 
 export default function Home() {
   const { deals, featured, products, categories, loadingCatalog, catalogError, refreshCatalog } = useStore()
+  const shopCategories = categories.filter(isShopCategory)
   const ends = deals[0]?.dealEndsAt || new Date(Date.now() + 86400000 * 2).toISOString()
   const t = useCountdown(ends)
 
@@ -99,16 +101,20 @@ export default function Home() {
         <div className="feature"><div className="feature-icon"><Icon d={paths.support} /></div><div><h3>24h Support</h3><p>Always ready to answer customer support.</p></div></div>
       </section>
 
-      {categories.length > 0 && (
+      {shopCategories.length > 0 && (
         <section className="container section">
           <div className="section-head"><h2>Shop By Category</h2><Link className="link-btn" to="/shop">View all</Link></div>
           <div className="cats">
-            {categories.map((c) => (
+            {shopCategories.map((c) => (
               <Link className="cat-chip" key={c.id} to={`/shop?category=${c.id}`}>
                 <span style={{ fontSize: 28 }}>{catEmoji[c.name] || '📦'}</span>
                 <b>{c.name}</b>
               </Link>
             ))}
+            <Link className="cat-chip" to="/lab-reports">
+              <span style={{ fontSize: 28 }}>🧪</span>
+              <b>Lab Reports</b>
+            </Link>
           </div>
         </section>
       )}

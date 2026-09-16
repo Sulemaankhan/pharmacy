@@ -41,6 +41,7 @@ public class DataSeeder {
             }
             if (products.count() > 0) {
                 applyInrPrices(products);
+                seedLabReports(categories, products);
                 return;
             }
 
@@ -85,6 +86,7 @@ public class DataSeeder {
                             "899.00", "1299.00", "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=600",
                             "FitHome", wellness, false, true, null, 4.2, 140)
             ));
+            seedLabReports(categories, products);
         };
     }
 
@@ -154,6 +156,80 @@ public class DataSeeder {
         p.setRating(rating);
         p.setReviewCount(reviews);
         p.setStock(120);
+        return p;
+    }
+
+    private void seedLabReports(CategoryRepository categories, ProductRepository products) {
+        Category lab = categories.findByName("Lab Reports").orElseGet(() -> cat(categories, "Lab Reports", "flask"));
+        String thyroidImg = "https://images.unsplash.com/photo-1582719471384-894fbb16e074?w=600";
+        String kidneyImg = "https://images.unsplash.com/photo-1579684385127-1ef15d508118?w=600";
+        String liverImg = "https://images.unsplash.com/photo-1579154204601-01588f351e67?w=600";
+        String heartImg = "https://images.unsplash.com/photo-1530026405186-ed1f139313f8?w=600";
+        String diabetesImg = "https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=600";
+        List<Product> tests = List.of(
+                labTest("Thyroid Profile (T3, T4, TSH)",
+                        "Complete thyroid panel covering Total T3, Total T4 and TSH to assess thyroid gland function.",
+                        "499.00", "799.00", thyroidImg, "PathCare", lab, "THYROID", 4.8, 412),
+                labTest("TSH Ultrasensitive",
+                        "High-sensitivity TSH test to detect early hypo or hyperthyroidism.",
+                        "299.00", "449.00", thyroidImg, "PathCare", lab, "THYROID", 4.7, 286),
+                labTest("Free T3 & Free T4",
+                        "Free thyroid hormone test for a clearer picture when TSH is abnormal.",
+                        "699.00", "999.00", thyroidImg, "PathCare", lab, "THYROID", 4.6, 174),
+                labTest("Kidney Function Test (KFT)",
+                        "Kidney panel including urea, creatinine, uric acid and electrolytes.",
+                        "599.00", "899.00", kidneyImg, "PathCare", lab, "KIDNEY", 4.8, 338),
+                labTest("Serum Creatinine",
+                        "Creatinine blood test to monitor kidney filtration and chronic kidney disease risk.",
+                        "249.00", "399.00", kidneyImg, "PathCare", lab, "KIDNEY", 4.5, 201),
+                labTest("Urea & Uric Acid",
+                        "Urea and uric acid test useful for kidney health, gout and metabolic follow-up.",
+                        "349.00", "549.00", kidneyImg, "PathCare", lab, "KIDNEY", 4.4, 156),
+                labTest("Liver Function Test (LFT)",
+                        "Liver panel covering bilirubin, SGOT, SGPT, ALP, proteins and albumin.",
+                        "699.00", "999.00", liverImg, "PathCare", lab, "LIVER", 4.8, 365),
+                labTest("SGPT / ALT",
+                        "Alanine aminotransferase test to check liver enzyme elevation.",
+                        "249.00", "399.00", liverImg, "PathCare", lab, "LIVER", 4.5, 188),
+                labTest("Bilirubin Total & Direct",
+                        "Bilirubin test to assess jaundice, bile flow and liver processing.",
+                        "299.00", "449.00", liverImg, "PathCare", lab, "LIVER", 4.4, 142),
+                labTest("Lipid Profile",
+                        "Cholesterol panel: total cholesterol, HDL, LDL, triglycerides and VLDL.",
+                        "599.00", "899.00", heartImg, "PathCare", lab, "HEART", 4.9, 521),
+                labTest("Cardiac Risk Markers",
+                        "Heart risk package with hs-CRP, homocysteine and lipid markers.",
+                        "1499.00", "1999.00", heartImg, "PathCare", lab, "HEART", 4.6, 98),
+                labTest("ECG + Lipid Combo",
+                        "Resting ECG with lipid profile for a combined heart health snapshot.",
+                        "899.00", "1299.00", heartImg, "PathCare", lab, "HEART", 4.7, 210),
+                labTest("HbA1c (Glycated Hemoglobin)",
+                        "3-month average blood sugar test used to diagnose and monitor diabetes.",
+                        "449.00", "649.00", diabetesImg, "PathCare", lab, "DIABETES", 4.9, 640),
+                labTest("Fasting Blood Sugar",
+                        "Fasting glucose test to screen for diabetes and prediabetes.",
+                        "149.00", "249.00", diabetesImg, "PathCare", lab, "DIABETES", 4.6, 430),
+                labTest("Diabetes Screening Package",
+                        "Fasting sugar, HbA1c and postprandial glucose in one screening pack.",
+                        "799.00", "1199.00", diabetesImg, "PathCare", lab, "DIABETES", 4.8, 274)
+        );
+        int added = 0;
+        for (Product test : tests) {
+            if (!products.existsByName(test.getName())) {
+                products.save(test);
+                added++;
+            }
+        }
+        if (added > 0) {
+            log.info("Seeded lab report tests count={}", added);
+        }
+    }
+
+    private Product labTest(String name, String desc, String price, String compare, String img,
+                            String brand, Category category, String panel, double rating, int reviews) {
+        Product p = product(name, desc, price, compare, img, brand, category, false, false, null, rating, reviews);
+        p.setLabPanel(panel);
+        p.setStock(999);
         return p;
     }
 }

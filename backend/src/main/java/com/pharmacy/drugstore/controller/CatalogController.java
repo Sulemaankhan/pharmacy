@@ -35,15 +35,19 @@ public class CatalogController {
             @RequestParam(required = false) Long categoryId,
             @RequestParam(required = false) String q,
             @RequestParam(required = false) Boolean deals,
-            @RequestParam(required = false) Boolean featured) {
+            @RequestParam(required = false) Boolean featured,
+            @RequestParam(required = false) String labPanel) {
         List<Product> list;
-        if (q != null && !q.isBlank()) list = products.search(q.trim());
+        if (labPanel != null && !labPanel.isBlank()) {
+            if ("ALL".equalsIgnoreCase(labPanel.trim())) list = products.findByLabPanelIsNotNull();
+            else list = products.findByLabPanel(labPanel.trim().toUpperCase());
+        } else if (q != null && !q.isBlank()) list = products.search(q.trim());
         else if (Boolean.TRUE.equals(deals)) list = products.findByDealOfTheDayTrue();
         else if (Boolean.TRUE.equals(featured)) list = products.findByFeaturedTrue();
         else if (categoryId != null) list = products.findByCategoryId(categoryId);
         else list = products.findAll();
-        log.info("Catalog products count={} categoryId={} q={} deals={} featured={}",
-                list.size(), categoryId, q, deals, featured);
+        log.info("Catalog products count={} categoryId={} q={} deals={} featured={} labPanel={}",
+                list.size(), categoryId, q, deals, featured, labPanel);
         return list;
     }
 

@@ -148,8 +148,8 @@ export function StoreProvider({ children }) {
 
   const value = useMemo(() => ({
     user, profile, products, categories, cart, wishlist, orders, query, setQuery, catalogError, loadingCatalog, refreshCatalog,
-    deals: products.filter((p) => p.dealOfTheDay),
-    featured: products.filter((p) => p.featured),
+    deals: products.filter((p) => p.dealOfTheDay && !p.labPanel),
+    featured: products.filter((p) => p.featured && !p.labPanel),
     cartCount: cart.reduce((n, i) => n + (i?.quantity || 0), 0),
     cartTotal: cart.reduce((n, i) => n + Number(i?.product?.price || 0) * (i?.quantity || 0), 0),
     wishCount: wishlist.length,
