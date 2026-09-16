@@ -10,6 +10,9 @@ import OrderSuccess from './pages/OrderSuccess'
 import Orders from './pages/Orders'
 import OrderDetail from './pages/OrderDetail'
 import Auth from './pages/Auth'
+import Profile from './pages/Profile'
+import ForgotPassword from './pages/ForgotPassword'
+import ResetPassword from './pages/ResetPassword'
 import Wishlist from './pages/Wishlist'
 import About from './pages/About'
 import Contact from './pages/Contact'
@@ -35,6 +38,9 @@ export default function App() {
           <Route path="/order/:orderNumber" element={<OrderSuccess />} />
           <Route path="/wishlist" element={<Wishlist />} />
           <Route path="/auth" element={<Auth />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/about" element={<About />} />
           <Route path="/contact" element={<Contact />} />
         </Routes>

@@ -46,6 +46,7 @@ export default function Footer() {
               <h3>Account</h3>
               {user ? (
                 <>
+                  <Link to="/profile">Profile</Link>
                   <Link to="/orders">Order history</Link>
                   <Link to="/shipments">Shipments</Link>
                   <Link to="/cart">Cart</Link>

@@ -37,7 +37,7 @@ export default function Header() {
             <span>English</span>
               {user ? (
                 <>
-                  <span>Hi, {user.name}</span>
+                  <Link to="/profile">Hi, {user.name}</Link>
                   <Link to="/orders">Orders</Link>
                   <Link to="/shipments">Shipments</Link>
                   <button type="button" className="link-btn" onClick={handleLogout}>Logout</button>
@@ -111,6 +111,7 @@ export default function Header() {
           <div className="nav-links">
             <NavLink to="/" end>Home</NavLink>
             <NavLink to="/shop">Shop</NavLink>
+            {user && <NavLink to="/profile">Profile</NavLink>}
             {user && <NavLink to="/orders">Orders</NavLink>}
             {user && <NavLink to="/shipments">Shipments</NavLink>}
             <NavLink to="/about">About Us</NavLink>
@@ -124,6 +125,7 @@ export default function Header() {
         <div className="container mobile-menu">
           <Link to="/" onClick={() => setOpen(false)}>Home</Link>
           <Link to="/shop" onClick={() => setOpen(false)}>Shop</Link>
+          {user && <Link to="/profile" onClick={() => setOpen(false)}>Profile</Link>}
           {user && <Link to="/orders" onClick={() => setOpen(false)}>Orders</Link>}
           {user && <Link to="/shipments" onClick={() => setOpen(false)}>Shipments</Link>}
           <Link to="/about" onClick={() => setOpen(false)}>About</Link>

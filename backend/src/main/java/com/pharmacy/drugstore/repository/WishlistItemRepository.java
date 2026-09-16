@@ -13,4 +13,6 @@ public interface WishlistItemRepository extends JpaRepository<WishlistItem, Long
 
     @Query("SELECT w FROM WishlistItem w WHERE w.user.id = :userId AND w.product.id = :productId")
     Optional<WishlistItem> findByUserIdAndProductId(@Param("userId") Long userId, @Param("productId") Long productId);
+
+    long countByUser_Id(Long userId);
 }

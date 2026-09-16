@@ -27,7 +27,8 @@ export default function Auth() {
         <div className="auth-box">
           <h2>Your account</h2>
           <p className="lead">Signed in as <b>{user.name}</b><br />{user.email}</p>
-          <Link className="btn full" to="/orders">View order history</Link>
+          <Link className="btn full" to="/profile">Open live profile</Link>
+          <Link className="btn outline full" to="/orders" style={{ marginTop: 10 }}>View order history</Link>
           <Link className="btn outline full" to="/shipments" style={{ marginTop: 10 }}>Track shipments</Link>
           <button type="button" className="btn outline full" style={{ marginTop: 10 }} onClick={() => { logout(); navigate('/auth') }}>Logout</button>
         </div>
@@ -52,6 +53,9 @@ export default function Auth() {
         <input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required />
         {error && <p className="error">{error}</p>}
         <button className="btn full" style={{ marginTop: 16 }}>{mode === 'login' ? 'Sign In' : 'Create account'}</button>
+        {mode === 'login' && (
+          <Link className="link-btn" to="/forgot-password" style={{ display: 'block', marginTop: 12 }}>Forgot password?</Link>
+        )}
         <p className="demo-note">Demo login: demo@pharmacy.com / demo123</p>
         <button type="button" className="link-btn" style={{ marginTop: 14 }}
           onClick={() => setMode(mode === 'login' ? 'register' : 'login')}>

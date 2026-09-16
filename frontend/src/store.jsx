@@ -20,6 +20,7 @@ export function StoreProvider({ children }) {
   const [query, setQuery] = useState('')
   const [catalogError, setCatalogError] = useState('')
   const [loadingCatalog, setLoadingCatalog] = useState(true)
+  const [profile, setProfile] = useState(null)
 
   async function refreshCatalog() {
     setLoadingCatalog(true)
@@ -55,6 +56,40 @@ export function StoreProvider({ children }) {
     if (cartRes.status === 'rejected') throw cartRes.reason
   }
 
+  function applyProfile(data) {
+    if (!data) return
+    setAuth({ ...data, token: data.token || getToken() })
+    const next = getUser()
+    setUser((prev) => {
+      if (prev?.name === next?.name && prev?.email === next?.email && prev?.phone === next?.phone
+        && prev?.address === next?.address && prev?.city === next?.city && prev?.state === next?.state
+        && prev?.pincode === next?.pincode) {
+        return prev
+      }
+      return next
+    })
+    setProfile((prev) => {
+      if (prev && prev.orderCount === data.orderCount && prev.cartCount === data.cartCount
+        && prev.wishlistCount === data.wishlistCount && prev.lastOrderNumber === data.lastOrderNumber
+        && prev.name === data.name && prev.email === data.email && prev.phone === data.phone
+        && prev.address === data.address && prev.updatedAt === data.updatedAt) {
+        return { ...prev, refreshedAt: data.refreshedAt }
+      }
+      return data
+    })
+  }
+
+  async function refreshProfile() {
+    if (!isTokenValid() || !getUser()?.userId) {
+      setProfile(null)
+      return null
+    }
+    const data = await api('/api/profile')
+    if (!sameUserId(getUser()?.userId, data.userId)) return null
+    applyProfile(data)
+    return data
+  }
+
   useEffect(() => {
     const current = getValidUser()
     clientLog('info', 'app.start', current
@@ -65,6 +100,7 @@ export function StoreProvider({ children }) {
   useEffect(() => {
     return onAuthCleared(() => {
       setUser(null)
+      setProfile(null)
       clearPrivateState(setCart, setWishlist, setOrders)
     })
   }, [])
@@ -85,11 +121,15 @@ export function StoreProvider({ children }) {
   useEffect(() => {
     const userId = user?.userId
     if (userId == null) {
+      setProfile(null)
       clearPrivateState(setCart, setWishlist, setOrders)
       return undefined
     }
     clearPrivateState(setCart, setWishlist, setOrders)
     refreshUserData(userId).catch(() => {})
+    refreshProfile().catch(() => {})
+    const timer = setInterval(() => refreshProfile().catch(() => {}), 8000)
+    return () => clearInterval(timer)
   }, [user?.userId])
 
   useEffect(() => {
@@ -107,7 +147,7 @@ export function StoreProvider({ children }) {
   }, [])
 
   const value = useMemo(() => ({
-    user, products, categories, cart, wishlist, orders, query, setQuery, catalogError, loadingCatalog, refreshCatalog,
+    user, profile, products, categories, cart, wishlist, orders, query, setQuery, catalogError, loadingCatalog, refreshCatalog,
     deals: products.filter((p) => p.dealOfTheDay),
     featured: products.filter((p) => p.featured),
     cartCount: cart.reduce((n, i) => n + (i?.quantity || 0), 0),
@@ -157,13 +197,24 @@ export function StoreProvider({ children }) {
       await refreshUserData(getUser()?.userId)
     },
     refreshUserData,
+    refreshProfile,
+    applyProfile,
+    async saveProfile(payload) {
+      if (!isTokenValid() || !getUser()?.userId) throw new Error('Please sign in')
+      clientLog('info', 'profile.save', { email: payload.email })
+      const data = await api('/api/profile', { method: 'PATCH', body: JSON.stringify(payload) })
+      applyProfile(data)
+      await refreshUserData(getUser()?.userId).catch(() => {})
+      clientLog('info', 'profile.saved', { userId: data.userId, email: data.email })
+      return data
+    },
     async toggleWish(productId) {
       if (!isTokenValid() || !getUser()?.userId) throw new Error('Please sign in to use wishlist')
       clientLog('info', 'wishlist.toggle', { productId })
       await api(`/api/wishlist/${productId}`, { method: 'POST' })
       await refreshUserData(getUser()?.userId)
     }
-  }), [user, products, categories, cart, wishlist, orders, query, catalogError, loadingCatalog])
+  }), [user, profile, products, categories, cart, wishlist, orders, query, catalogError, loadingCatalog])
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>
 }

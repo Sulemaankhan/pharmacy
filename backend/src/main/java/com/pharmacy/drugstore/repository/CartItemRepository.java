@@ -18,4 +18,6 @@ public interface CartItemRepository extends JpaRepository<CartItem, Long> {
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("DELETE FROM CartItem c WHERE c.user.id = :userId")
     int deleteByUserId(@Param("userId") Long userId);
+
+    long countByUser_Id(Long userId);
 }

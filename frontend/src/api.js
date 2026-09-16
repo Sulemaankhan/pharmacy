@@ -16,18 +16,27 @@ export function getUser() {
 }
 
 export function setAuth(data) {
-  localStorage.setItem(TOKEN, data.token)
-  localStorage.setItem(USER, JSON.stringify({
-    userId: data.userId ?? data.id,
-    name: data.name,
-    email: data.email,
-    role: data.role,
-  }))
+  if (data.token) localStorage.setItem(TOKEN, data.token)
+  const prev = getUser() || {}
+  const next = {
+    userId: data.userId ?? data.id ?? prev.userId,
+    name: data.name ?? prev.name,
+    email: data.email ?? prev.email,
+    role: data.role ?? prev.role,
+    phone: data.phone ?? prev.phone ?? '',
+    address: data.address ?? prev.address ?? '',
+    city: data.city ?? prev.city ?? '',
+    state: data.state ?? prev.state ?? '',
+    pincode: data.pincode ?? prev.pincode ?? '',
+    createdAt: data.createdAt ?? prev.createdAt,
+    updatedAt: data.updatedAt ?? prev.updatedAt,
+  }
+  localStorage.setItem(USER, JSON.stringify(next))
   clientLog('info', 'auth.set', {
-    userId: data.userId ?? data.id,
-    email: data.email,
-    name: data.name,
-    role: data.role,
+    userId: next.userId,
+    email: next.email,
+    name: next.name,
+    role: next.role,
   })
 }
 

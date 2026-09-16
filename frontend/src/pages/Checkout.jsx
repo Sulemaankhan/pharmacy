@@ -22,21 +22,21 @@ function loadShip(user) {
     const saved = user?.userId ? JSON.parse(localStorage.getItem(shipKey(user.userId)) || 'null') : null
     return {
       recipientName: saved?.recipientName || user?.name || '',
-      address: saved?.address || '',
-      city: saved?.city || '',
-      state: saved?.state || '',
-      pincode: saved?.pincode || '',
-      contactNumber: saved?.contactNumber || '',
+      address: saved?.address || user?.address || '',
+      city: saved?.city || user?.city || '',
+      state: saved?.state || user?.state || '',
+      pincode: saved?.pincode || user?.pincode || '',
+      contactNumber: saved?.contactNumber || user?.phone || '',
       email: saved?.email || user?.email || '',
     }
   } catch {
     return {
       recipientName: user?.name || '',
-      address: '',
-      city: '',
-      state: '',
-      pincode: '',
-      contactNumber: '',
+      address: user?.address || '',
+      city: user?.city || '',
+      state: user?.state || '',
+      pincode: user?.pincode || '',
+      contactNumber: user?.phone || '',
       email: user?.email || '',
     }
   }

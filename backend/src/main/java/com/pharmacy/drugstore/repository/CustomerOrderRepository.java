@@ -13,4 +13,9 @@ public interface CustomerOrderRepository extends JpaRepository<CustomerOrder, Lo
 
     @Query("SELECT DISTINCT o FROM CustomerOrder o LEFT JOIN FETCH o.items LEFT JOIN FETCH o.payment LEFT JOIN FETCH o.shipment WHERE o.orderNumber = :orderNumber AND o.user.id = :userId")
     Optional<CustomerOrder> findByOrderNumberAndUserId(@Param("orderNumber") String orderNumber, @Param("userId") Long userId);
+
+    @Query("SELECT COUNT(o) FROM CustomerOrder o WHERE o.user.id = :userId")
+    long countByUserId(@Param("userId") Long userId);
+
+    Optional<CustomerOrder> findFirstByUser_IdOrderByCreatedAtDesc(Long userId);
 }
