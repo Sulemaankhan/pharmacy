@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useStore } from '../store'
+import ProfileTabs from '../components/ProfileTabs'
 
 function formatWhen(iso) {
   if (!iso) return '—'
@@ -101,6 +102,7 @@ export default function Profile() {
         <div>
           <p className="crumb">Account</p>
           <h2 className="page-title">Your profile</h2>
+          <ProfileTabs />
           <p className="muted">
             <span className="live-dot pulse" />
             Live · last refresh {formatWhen(live.refreshedAt)}
@@ -133,7 +135,7 @@ export default function Profile() {
             </Link>
           </div>
           <p style={{ marginTop: 14 }}>
-            <Link className="link-btn" to="/health-report">Open health report charts</Link>
+            <Link className="link-btn" to="/lab-reports">Open lab reports</Link>
           </p>
           {live.lastOrderNumber && (
             <p style={{ marginTop: 14 }}>

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useStore } from '../store'
 import { fetchShipments } from '../shipments'
+import ProfileTabs from '../components/ProfileTabs'
 
 function formatDate(iso) {
   if (!iso) return ''
@@ -51,10 +52,11 @@ export default function Shipments() {
 
   return (
     <div className="container page">
-      <p className="crumb">Home / Shipments</p>
+      <p className="crumb">Home / Profile / Shipments</p>
       <div className="page-head">
         <div>
           <h2 className="page-title">Shipments</h2>
+          <ProfileTabs />
           <p className="muted">Live tracking for {list.length} shipment{list.length === 1 ? '' : 's'}</p>
         </div>
       </div>

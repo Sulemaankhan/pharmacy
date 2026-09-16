@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useStore } from '../store'
 import { downloadFile, api } from '../api'
 import { formatMoney } from '../money'
+import ProfileTabs from '../components/ProfileTabs'
 
 function formatDate(iso) {
   if (!iso) return ''
@@ -74,10 +75,11 @@ export default function Orders() {
 
   return (
     <div className="container page">
-      <p className="crumb">Home / Orders</p>
+      <p className="crumb">Home / Profile / Orders</p>
       <div className="page-head">
         <div>
           <h2 className="page-title">Order history</h2>
+          <ProfileTabs />
           <p className="muted">{mine.length} order{mine.length === 1 ? '' : 's'} placed</p>
         </div>
         <div className="export-actions">

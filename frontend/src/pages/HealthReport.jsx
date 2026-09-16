@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api, apiUpload, asList } from '../api'
 import { useStore } from '../store'
+import LabReportsTabs from '../components/LabReportsTabs'
 
 const PANELS = [
   { id: 'THYROID', name: 'Thyroid' },
@@ -205,9 +206,9 @@ export default function HealthReport() {
   if (!user) {
     return (
       <div className="container page">
-        <p className="crumb">Home / Health Report</p>
+        <p className="crumb">Home / Lab Reports / Report Status</p>
         <div className="empty">
-          <h2>Sign in to upload a health report</h2>
+          <h2>Sign in to view report status</h2>
           <p className="muted">PDF lab reports are read with RAG, then your profile status is drawn as charts.</p>
           <Link className="btn" to="/auth" style={{ marginTop: 16 }}>Sign in</Link>
         </div>
@@ -217,10 +218,11 @@ export default function HealthReport() {
 
   return (
     <div className="container page">
-      <p className="crumb">Home / Health Report</p>
+        <p className="crumb">Home / Lab Reports / Report Status</p>
       <div className="page-head">
         <div>
-          <h2 className="page-title">Health Report</h2>
+          <h2 className="page-title">Report Status</h2>
+          <LabReportsTabs />
           <p className="muted">Upload a PDF lab report. The app reads it with RAG, writes a summary, and graphs your health profile.</p>
         </div>
       </div>

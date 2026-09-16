@@ -11,7 +11,8 @@ export function isLabProduct(product) {
 }
 
 export function isShopCategory(category) {
-  return category?.name !== 'Lab Reports'
+  const name = category?.name
+  return name !== 'Lab Reports' && name !== 'Lab Tests'
 }
 
 export function panelLabel(id) {

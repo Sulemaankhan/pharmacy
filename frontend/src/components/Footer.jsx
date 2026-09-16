@@ -35,7 +35,6 @@ export default function Footer() {
               <Link to="/shop">All products</Link>
               <Link to="/shop?deals=1">Deals of the day</Link>
               <Link to="/lab-reports">Lab Reports</Link>
-              <Link to="/health-report">Health Report</Link>
               {user && <Link to="/wishlist">Wishlist</Link>}
             </div>
             <div>
@@ -49,7 +48,7 @@ export default function Footer() {
               {user ? (
                 <>
                   <Link to="/profile">Profile</Link>
-                  <Link to="/health-report">Health Report</Link>
+                  <Link to="/lab-reports">Lab Reports</Link>
                   <Link to="/orders">Order history</Link>
                   <Link to="/shipments">Shipments</Link>
                   <Link to="/cart">Cart</Link>

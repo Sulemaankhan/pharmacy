@@ -160,7 +160,12 @@ public class DataSeeder {
     }
 
     private void seedLabReports(CategoryRepository categories, ProductRepository products) {
-        Category lab = categories.findByName("Lab Reports").orElseGet(() -> cat(categories, "Lab Reports", "flask"));
+        Category lab = categories.findByName("Lab Tests").orElseGet(() ->
+                categories.findByName("Lab Reports").orElseGet(() -> cat(categories, "Lab Tests", "flask")));
+        if (!"Lab Tests".equals(lab.getName())) {
+            lab.setName("Lab Tests");
+            lab = categories.save(lab);
+        }
         String thyroidImg = "https://images.unsplash.com/photo-1582719471384-894fbb16e074?w=600";
         String kidneyImg = "https://images.unsplash.com/photo-1579684385127-1ef15d508118?w=600";
         String liverImg = "https://images.unsplash.com/photo-1579154204601-01588f351e67?w=600";

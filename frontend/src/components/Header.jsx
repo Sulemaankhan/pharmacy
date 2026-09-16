@@ -1,4 +1,4 @@
-import { Link, NavLink, useNavigate } from 'react-router-dom'
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 import { useStore } from '../store'
 import { formatMoney } from '../money'
@@ -10,8 +10,17 @@ export default function Header() {
   const [open, setOpen] = useState(false)
   const [catsOpen, setCatsOpen] = useState(false)
   const [labsOpen, setLabsOpen] = useState(false)
+  const [profileOpen, setProfileOpen] = useState(false)
   const shopCategories = categories.filter(isShopCategory)
   const navigate = useNavigate()
+  const location = useLocation()
+  const labsSection = location.pathname.startsWith('/lab-reports')
+    || location.pathname.startsWith('/lab-tests')
+    || location.pathname.startsWith('/report-status')
+    || location.pathname.startsWith('/health-report')
+  const profileSection = location.pathname.startsWith('/profile')
+    || location.pathname.startsWith('/orders')
+    || location.pathname.startsWith('/shipments')
 
   function search(e) {
     e.preventDefault()
@@ -41,8 +50,6 @@ export default function Header() {
               {user ? (
                 <>
                   <Link to="/profile">Hi, {user.name}</Link>
-                  <Link to="/orders">Orders</Link>
-                  <Link to="/shipments">Shipments</Link>
                   <button type="button" className="link-btn" onClick={handleLogout}>Logout</button>
                 </>
               ) : (
@@ -114,16 +121,23 @@ export default function Header() {
           <div className="nav-links">
             <NavLink to="/" end>Home</NavLink>
             <NavLink to="/shop">Shop</NavLink>
-            <NavLink to="/health-report">Health Report</NavLink>
             <div className="nav-drop-wrap" onMouseLeave={() => setLabsOpen(false)}>
-              <NavLink to="/lab-reports" onMouseEnter={() => setLabsOpen(true)}>Lab Reports</NavLink>
+              <NavLink
+                to="/lab-reports"
+                onMouseEnter={() => setLabsOpen(true)}
+                className={() => (labsSection ? 'active' : undefined)}
+              >
+                Lab Reports
+              </NavLink>
               {labsOpen && (
                 <div className="cat-drop nav-subdrop">
-                  <Link to="/lab-reports" onClick={() => setLabsOpen(false)}>All lab reports</Link>
+                  <Link to="/report-status" onClick={() => setLabsOpen(false)}>Report Status</Link>
+                  <Link to="/lab-tests" onClick={() => setLabsOpen(false)}>Lab Tests</Link>
                   {LAB_PANELS.map((panel) => (
                     <Link
                       key={panel.id}
-                      to={`/lab-reports?panel=${panel.id}`}
+                      className="drop-sub"
+                      to={`/lab-tests?panel=${panel.id}`}
                       onClick={() => setLabsOpen(false)}
                     >
                       {panel.name}
@@ -132,9 +146,24 @@ export default function Header() {
                 </div>
               )}
             </div>
-            {user && <NavLink to="/profile">Profile</NavLink>}
-            {user && <NavLink to="/orders">Orders</NavLink>}
-            {user && <NavLink to="/shipments">Shipments</NavLink>}
+            {user && (
+              <div className="nav-drop-wrap" onMouseLeave={() => setProfileOpen(false)}>
+                <NavLink
+                  to="/profile"
+                  onMouseEnter={() => setProfileOpen(true)}
+                  className={() => (profileSection ? 'active' : undefined)}
+                >
+                  Profile
+                </NavLink>
+                {profileOpen && (
+                  <div className="cat-drop nav-subdrop">
+                    <Link to="/profile" onClick={() => setProfileOpen(false)}>My profile</Link>
+                    <Link to="/orders" onClick={() => setProfileOpen(false)}>Orders</Link>
+                    <Link to="/shipments" onClick={() => setProfileOpen(false)}>Shipments</Link>
+                  </div>
+                )}
+              </div>
+            )}
             <NavLink to="/about">About Us</NavLink>
             <NavLink to="/contact">Contact Us</NavLink>
           </div>
@@ -146,16 +175,21 @@ export default function Header() {
         <div className="container mobile-menu">
           <Link to="/" onClick={() => setOpen(false)}>Home</Link>
           <Link to="/shop" onClick={() => setOpen(false)}>Shop</Link>
-          <Link to="/health-report" onClick={() => setOpen(false)}>Health Report</Link>
           <Link to="/lab-reports" onClick={() => setOpen(false)}>Lab Reports</Link>
+          <Link className="mobile-sub" to="/report-status" onClick={() => setOpen(false)}>Report Status</Link>
+          <Link className="mobile-sub" to="/lab-tests" onClick={() => setOpen(false)}>Lab Tests</Link>
           {LAB_PANELS.map((panel) => (
-            <Link key={panel.id} to={`/lab-reports?panel=${panel.id}`} onClick={() => setOpen(false)}>
+            <Link key={panel.id} className="mobile-sub" to={`/lab-tests?panel=${panel.id}`} onClick={() => setOpen(false)}>
               {panel.name}
             </Link>
           ))}
-          {user && <Link to="/profile" onClick={() => setOpen(false)}>Profile</Link>}
-          {user && <Link to="/orders" onClick={() => setOpen(false)}>Orders</Link>}
-          {user && <Link to="/shipments" onClick={() => setOpen(false)}>Shipments</Link>}
+          {user && (
+            <>
+              <Link to="/profile" onClick={() => setOpen(false)}>Profile</Link>
+              <Link className="mobile-sub" to="/orders" onClick={() => setOpen(false)}>Orders</Link>
+              <Link className="mobile-sub" to="/shipments" onClick={() => setOpen(false)}>Shipments</Link>
+            </>
+          )}
           <Link to="/about" onClick={() => setOpen(false)}>About</Link>
           <Link to="/contact" onClick={() => setOpen(false)}>Contact</Link>
           {user ? (

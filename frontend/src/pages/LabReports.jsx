@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import ProductCard from '../components/ProductCard'
 import { useStore } from '../store'
 import { LAB_PANELS, isLabProduct, panelLabel } from '../labReports'
+import LabReportsTabs from '../components/LabReportsTabs'
 
 export default function LabReports() {
   const { products, loadingCatalog, catalogError, refreshCatalog } = useStore()
@@ -25,13 +26,13 @@ export default function LabReports() {
     setParams(next)
   }
 
-  const title = active ? `${active.name} tests` : 'Lab Reports'
+  const title = active ? `${active.name} tests` : 'Lab Tests'
 
   return (
     <div className="container page shop-layout">
       <aside className="side">
-        <h3>Lab reports</h3>
-        <button className={!panel ? 'active' : ''} onClick={() => setPanel(null)}>All reports</button>
+        <h3>Lab tests</h3>
+        <button className={!panel ? 'active' : ''} onClick={() => setPanel(null)}>All tests</button>
         {LAB_PANELS.map((item) => (
           <button key={item.id} className={item.id === panel ? 'active' : ''} onClick={() => setPanel(item.id)}>
             {item.name}
@@ -39,8 +40,9 @@ export default function LabReports() {
         ))}
       </aside>
       <div>
-        <p className="crumb">Home / Lab Reports{active ? ` / ${active.name}` : ''}</p>
+        <p className="crumb">Home / Lab Reports / Lab Tests{active ? ` / ${active.name}` : ''}</p>
         <h2 className="page-title">{title}</h2>
+        <LabReportsTabs />
         <p className="muted">
           {active ? active.blurb : 'Book thyroid, kidney, liver, heart and diabetes tests. Add to cart like shop products.'}
         </p>
@@ -50,11 +52,11 @@ export default function LabReports() {
             {catalogError} <button className="link-btn" onClick={() => refreshCatalog()}>Retry</button>
           </p>
         )}
-        {loadingCatalog && products.length === 0 && <p className="muted">Loading lab reports...</p>}
+        {loadingCatalog && products.length === 0 && <p className="muted">Loading lab tests...</p>}
         {!loadingCatalog && list.length === 0 && (
           <div className="empty" style={{ marginTop: 20 }}>
             <p>No lab tests in this group yet.</p>
-            <Link className="btn" style={{ marginTop: 12 }} to="/lab-reports">View all reports</Link>
+            <Link className="btn" style={{ marginTop: 12 }} to="/lab-tests">View all tests</Link>
           </div>
         )}
         <div className="lab-chips">
@@ -62,7 +64,7 @@ export default function LabReports() {
             <Link
               key={item.id}
               className={`lab-chip${item.id === panel ? ' on' : ''}`}
-              to={`/lab-reports?panel=${item.id}`}
+              to={`/lab-tests?panel=${item.id}`}
             >
               <b>{item.name}</b>
               <span>{item.blurb}</span>
@@ -74,7 +76,7 @@ export default function LabReports() {
         </div>
         {list.length > 0 && panel && (
           <p className="muted" style={{ marginTop: 16 }}>
-            Showing {panelLabel(panel)} tests. <Link className="link-btn" to="/lab-reports">See all lab reports</Link>
+            Showing {panelLabel(panel)} tests. <Link className="link-btn" to="/lab-tests">See all lab tests</Link>
           </p>
         )}
       </div>

@@ -168,6 +168,21 @@ img { max-width: 100%; display: block; }
 }
 .nav-drop-wrap { position: relative; }
 .nav-drop-wrap .nav-subdrop { left: 0; top: calc(100% + 4px); width: 220px; }
+.mobile-menu a.mobile-sub { padding-left: 14px; font-size: 15px; color: var(--muted); }
+.profile-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 4px; }
+.profile-tabs a {
+  border: 2px solid var(--line); background: var(--card); border-radius: 99px;
+  padding: 7px 14px; font-weight: 800; color: var(--text); font-size: 14px;
+}
+.profile-tabs a.active, .profile-tabs a:hover {
+  background: var(--green); color: var(--on-green); border-color: var(--green);
+}
+.cat-drop a.drop-sub { padding-left: 22px; font-weight: 700; color: var(--muted); }
+.lab-hub { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 8px; }
+.lab-hub-card { display: grid; gap: 8px; color: var(--text); text-decoration: none; }
+.lab-hub-card b { font-size: 22px; color: var(--green-dark); }
+.lab-hub-card span { font-weight: 600; color: var(--muted); line-height: 1.5; }
+.lab-hub-card:hover { border-color: var(--green); }
 
 .hero {
   background: linear-gradient(180deg, #eef2ee 0%, var(--bg) 100%);
@@ -557,7 +572,7 @@ footer a:hover { color: #ffd6e7; }
   .header-inner { gap: 8px; }
   .logo h1 { font-size: 14px; }
   .search { max-width: none; }
-  .hero-inner, .features, .grid, .shop-layout, .detail, .footer-grid, .cart-layout, .cats, .newsletter, .pay-modes, .split-2, .split-3, .promo-row, .ship-steps, .profile-layout, .lab-chips, .health-layout, .metric-grid { grid-template-columns: 1fr; }
+  .hero-inner, .features, .grid, .shop-layout, .detail, .footer-grid, .cart-layout, .cats, .newsletter, .pay-modes, .split-2, .split-3, .promo-row, .ship-steps, .profile-layout, .lab-chips, .health-layout, .metric-grid, .lab-hub { grid-template-columns: 1fr; }
   .newsletter form { min-width: 0; width: 100%; }
   .hero h2 { font-size: 36px; }
   .hero-inner { min-height: 0; text-align: center; padding: 24px 0; }

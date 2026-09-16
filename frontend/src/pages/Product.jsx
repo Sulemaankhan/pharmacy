@@ -24,7 +24,7 @@ export default function ProductPage() {
     <div className="container page">
       <p className="crumb">
         Home / {isLabProduct(product)
-          ? <Link to={`/lab-reports?panel=${product.labPanel}`}>Lab Reports / {panelLabel(product.labPanel)}</Link>
+          ? <Link to={`/lab-tests?panel=${product.labPanel}`}>Lab Reports / Lab Tests / {panelLabel(product.labPanel)}</Link>
           : <Link to="/shop">Shop</Link>} / {product.name}
       </p>
       <div className="detail">
@@ -71,7 +71,7 @@ export default function ProductPage() {
         <section className="section" style={{ paddingTop: 40 }}>
           <div className="section-head">
             <h2>{isLabProduct(product) ? 'Related lab tests' : 'Related products'}</h2>
-            <Link className="link-btn" to={isLabProduct(product) ? `/lab-reports?panel=${product.labPanel}` : '/shop'}>View all</Link>
+            <Link className="link-btn" to={isLabProduct(product) ? `/lab-tests?panel=${product.labPanel}` : '/shop'}>View all</Link>
           </div>
           <div className="grid">
             {related.map((p) => <ProductCard key={p.id} product={p} />)}
