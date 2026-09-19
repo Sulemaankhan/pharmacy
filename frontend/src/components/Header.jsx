@@ -42,6 +42,7 @@ export default function Header() {
             <div className="socials">
               <span>f</span><span>t</span><span>p</span><span>in</span><span>yt</span>
             </div>
+            <span className="live-now"><span className="live-dot pulse" /> Pharmacy open</span>
             <span className="phone"><Icon d={paths.phone} size={14} /> (+91) 720-729-0964</span>
           </div>
           <div className="topbar-right">
@@ -68,10 +69,11 @@ export default function Header() {
             <LogoMark />
             <div>
               <h1>MEDICINE<br />DRUGSTORE</h1>
+              <small>Licensed · live orders</small>
             </div>
           </Link>
           <form className="search" onSubmit={search}>
-            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Enter your keyword..." />
+            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search medicines, devices or lab tests..." />
             <button type="submit">Search</button>
           </form>
           <div className="header-actions">

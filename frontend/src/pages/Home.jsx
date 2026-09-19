@@ -5,22 +5,6 @@ import { Link } from 'react-router-dom'
 import { Icon, paths } from '../icons'
 import { isShopCategory } from '../labReports'
 
-function Virus({ style }) {
-  return (
-    <svg className="virus" style={style} viewBox="0 0 48 48" fill="currentColor">
-      <circle cx="24" cy="24" r="11" />
-      <circle cx="24" cy="6" r="3" />
-      <circle cx="24" cy="42" r="3" />
-      <circle cx="6" cy="24" r="3" />
-      <circle cx="42" cy="24" r="3" />
-      <circle cx="11" cy="11" r="2.5" />
-      <circle cx="37" cy="11" r="2.5" />
-      <circle cx="11" cy="37" r="2.5" />
-      <circle cx="37" cy="37" r="2.5" />
-    </svg>
-  )
-}
-
 function useCountdown(iso) {
   const [left, setLeft] = useState({ d: 0, h: 0, m: 0, s: 0 })
   useEffect(() => {
@@ -50,7 +34,7 @@ const catEmoji = {
 }
 
 export default function Home() {
-  const { deals, featured, products, categories, loadingCatalog, catalogError, refreshCatalog } = useStore()
+  const { user, deals, featured, products, categories, loadingCatalog, catalogError, refreshCatalog } = useStore()
   const shopCategories = categories.filter(isShopCategory)
   const ends = deals[0]?.dealEndsAt || new Date(Date.now() + 86400000 * 2).toISOString()
   const t = useCountdown(ends)
@@ -64,33 +48,67 @@ export default function Home() {
       <section className="hero">
         <div className="container hero-inner">
           <div>
-            <span className="badge-green">KILLS 99.9% OF BACTERIA</span>
-            <h2>Hand Sanitizer</h2>
-            <p>Non-irritating, moisturizing formula for hospitals, clinics and everyday protection. Trusted genuine products, delivered fast.</p>
-            <div className="price-from">Start From <b>₹89</b></div>
-            <Link className="btn" to="/shop">Shop Now</Link>
-            <div className="hero-dots"><span className="on" /><span /><span /></div>
+            <span className="badge-green"><span className="live-dot pulse" /> Open now · same-day dispatch</span>
+            <h2>Your pharmacy,<br />delivered today</h2>
+            <p>Genuine medicines, medical devices and lab tests from a licensed drugstore. Track orders live and read your reports in one place.</p>
+            <div className="hero-actions">
+              <Link className="btn" to="/shop">Shop medicines</Link>
+              <Link className="btn outline" to="/lab-tests">Book lab tests</Link>
+            </div>
+            <div className="hero-stats">
+              <span><b>2–4 hr</b> city dispatch</span>
+              <span><b>100%</b> genuine stock</span>
+              <span><b>24×7</b> support</span>
+            </div>
           </div>
           <div className="hero-art">
-            <span className="orb" style={{ width: 220, height: 220, right: 48, top: 48 }} />
-            <Virus style={{ right: 36, top: 44 }} />
-            <img src="https://images.unsplash.com/photo-1584483766114-2cea6facdf57?w=700" alt="Hand sanitizer" />
+            <img src="https://images.unsplash.com/photo-1587854692152-cbe660dbde88?w=900" alt="Pharmacy medicines and care" />
+            <div className="hero-float">
+              <small>Live cart ready</small>
+              <b>From ₹89</b>
+            </div>
           </div>
         </div>
+      </section>
+
+      <section className="container quick-actions">
+        <Link to="/shop" className="quick-card">
+          <span className="quick-ico"><Icon d={paths.shop} /></span>
+          <b>Order medicines</b>
+          <small>Devices, care and daily essentials</small>
+        </Link>
+        <Link to="/lab-tests" className="quick-card">
+          <span className="quick-ico"><Icon d={paths.flask} /></span>
+          <b>Book lab tests</b>
+          <small>Thyroid, kidney, liver, heart, diabetes</small>
+        </Link>
+        <Link to="/report-status" className="quick-card">
+          <span className="quick-ico"><Icon d={paths.report} /></span>
+          <b>Upload report</b>
+          <small>See your health status as charts</small>
+        </Link>
+        <Link to={user ? '/shipments' : '/auth'} className="quick-card">
+          <span className="quick-ico"><Icon d={paths.truck} /></span>
+          <b>Track order</b>
+          <small>Live shipment updates</small>
+        </Link>
       </section>
 
       <section className="container promo-row">
         <Link className="promo-card promo-a" to="/shop?deals=1">
           <span>Limited time</span>
           <b>Deals of the day</b>
+          <em>Save on devices and wellness</em>
         </Link>
-        <Link className="promo-card promo-b" to="/shop?category=5">
-          <span>Immunity</span>
-          <b>Vitamins & wellness</b>
+        <Link className="promo-card promo-b" to="/lab-reports">
+          <span>Diagnostics</span>
+          <b>Lab reports & tests</b>
+          <em>Book packs or upload a PDF</em>
         </Link>
         <Link className="promo-card promo-c" to="/shop">
           <span>Trusted supply</span>
           <b>Genuine medicines</b>
+          <em>Licensed drugstore stock</em>
         </Link>
       </section>
 
@@ -107,12 +125,12 @@ export default function Home() {
           <div className="cats">
             {shopCategories.map((c) => (
               <Link className="cat-chip" key={c.id} to={`/shop?category=${c.id}`}>
-                <span style={{ fontSize: 28 }}>{catEmoji[c.name] || '📦'}</span>
+                <span className="cat-ico">{catEmoji[c.name] || '📦'}</span>
                 <b>{c.name}</b>
               </Link>
             ))}
             <Link className="cat-chip" to="/lab-reports">
-              <span style={{ fontSize: 28 }}>🧪</span>
+              <span className="cat-ico">🧪</span>
               <b>Lab Reports</b>
             </Link>
           </div>
