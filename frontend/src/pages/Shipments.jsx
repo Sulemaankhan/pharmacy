@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useStore } from '../store'
-import { fetchShipments } from '../shipments'
+import { connectShipmentSocket, fetchShipments } from '../shipments'
 import ProfileTabs from '../components/ProfileTabs'
 
 function formatDate(iso) {
@@ -27,15 +27,21 @@ export default function Shipments() {
 
   useEffect(() => {
     if (!user?.userId) return undefined
-    let timer
-    const load = () => {
-      fetchShipments()
-        .then(setList)
-        .catch((e) => setError(e.message))
-    }
-    load()
-    timer = setInterval(load, 5000)
-    return () => clearInterval(timer)
+    fetchShipments()
+      .then(setList)
+      .catch((e) => setError(e.message))
+    return connectShipmentSocket({
+      userId: user.userId,
+      onUpdate: (update) => {
+        setList((prev) => {
+          const index = prev.findIndex((item) => item.trackingNumber === update.trackingNumber)
+          if (index === -1) return [update, ...prev]
+          const next = [...prev]
+          next[index] = { ...next[index], ...update }
+          return next
+        })
+      },
+    })
   }, [user?.userId])
 
   if (!user) {

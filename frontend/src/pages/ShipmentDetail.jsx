@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useStore } from '../store'
 import ShipmentTracker from '../components/ShipmentTracker'
-import { fetchShipmentByTracking } from '../shipments'
+import { connectShipmentSocket, fetchShipmentByTracking } from '../shipments'
 
 export default function ShipmentDetail() {
   const { trackingNumber } = useParams()
@@ -12,27 +12,31 @@ export default function ShipmentDetail() {
 
   useEffect(() => {
     if (!user?.userId || !trackingNumber) return undefined
-    let stopped = false
-    const load = () => {
-      fetchShipmentByTracking(trackingNumber)
-        .then((data) => {
-          if (!data) {
-            setError('Shipment not found')
-            stopped = true
-            return
-          }
-          setError('')
-          setShipment(data)
-          if (data.status === 'DELIVERED' || data.status === 'CANCELLED') stopped = true
+    let cancelled = false
+    let disconnect = () => {}
+    fetchShipmentByTracking(trackingNumber)
+      .then((data) => {
+        if (cancelled) return
+        if (!data) {
+          setError('Shipment not found')
+          return
+        }
+        setError('')
+        setShipment(data)
+        if (data.status === 'DELIVERED' || data.status === 'CANCELLED') return
+        disconnect = connectShipmentSocket({
+          trackingNumber,
+          userId: user.userId,
+          onUpdate: (update) => {
+            if (update.trackingNumber === trackingNumber) setShipment((prev) => ({ ...prev, ...update }))
+          },
         })
-        .catch((e) => {
-          setError(e.message)
-          stopped = true
-        })
+      })
+      .catch((e) => { if (!cancelled) setError(e.message) })
+    return () => {
+      cancelled = true
+      disconnect()
     }
-    load()
-    const timer = setInterval(() => { if (!stopped) load() }, 4000)
-    return () => clearInterval(timer)
   }, [user?.userId, trackingNumber])
 
   if (!user) {

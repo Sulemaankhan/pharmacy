@@ -4,7 +4,7 @@ import { useStore } from '../store'
 import { api, downloadFile } from '../api'
 import { formatMoney } from '../money'
 import ShipmentTracker from '../components/ShipmentTracker'
-import { fetchOrderShipment } from '../shipments'
+import { connectShipmentSocket, fetchOrderShipment } from '../shipments'
 
 function formatDate(iso) {
   if (!iso) return ''
@@ -39,19 +39,28 @@ export default function OrderDetail() {
 
   useEffect(() => {
     if (!user?.userId || !orderNumber) return undefined
-    let stopped = false
-    const loadShip = () => {
-      fetchOrderShipment(orderNumber)
-        .then((data) => {
-          if (!data) return
-          setShipment(data)
-          if (data.status === 'DELIVERED' || data.status === 'CANCELLED') stopped = true
+    let cancelled = false
+    let disconnect = () => {}
+    fetchOrderShipment(orderNumber)
+      .then((data) => {
+        if (cancelled || !data) return
+        setShipment(data)
+        if (data.status === 'DELIVERED' || data.status === 'CANCELLED') return
+        disconnect = connectShipmentSocket({
+          trackingNumber: data.trackingNumber,
+          userId: user.userId,
+          onUpdate: (update) => {
+            if (!data.trackingNumber || update.trackingNumber === data.trackingNumber) {
+              setShipment((prev) => ({ ...prev, ...update }))
+            }
+          },
         })
-        .catch(() => { stopped = true })
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+      disconnect()
     }
-    loadShip()
-    const timer = setInterval(() => { if (!stopped) loadShip() }, 4000)
-    return () => clearInterval(timer)
   }, [user?.userId, orderNumber])
 
   async function exportOrder(format) {

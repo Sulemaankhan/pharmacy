@@ -6,7 +6,11 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      '/api': 'http://localhost:8082'
+      '/api': 'http://localhost:8082',
+      '/ws/shipments': {
+        target: 'http://localhost:8085',
+        ws: true,
+      },
     }
   }
 })

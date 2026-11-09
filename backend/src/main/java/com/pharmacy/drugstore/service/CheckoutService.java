@@ -15,6 +15,7 @@ import com.pharmacy.drugstore.kafka.NotificationPublisher;
 import com.pharmacy.drugstore.kafka.PaymentCommand;
 import com.pharmacy.drugstore.kafka.PaymentKafkaClient;
 import com.pharmacy.drugstore.kafka.PaymentResult;
+import com.pharmacy.drugstore.kafka.ShipmentPublisher;
 import com.pharmacy.drugstore.payment.PaymentMode;
 import com.pharmacy.drugstore.payment.PaymentStatus;
 import com.pharmacy.drugstore.repository.CartItemRepository;
@@ -55,6 +56,7 @@ public class CheckoutService {
     private final ShipmentService shipments;
     private final PaymentKafkaClient payments;
     private final NotificationPublisher notifications;
+    private final ShipmentPublisher shipmentEvents;
     private final TransactionTemplate tx;
 
     public CheckoutService(
@@ -66,6 +68,7 @@ public class CheckoutService {
             ShipmentService shipments,
             PaymentKafkaClient payments,
             NotificationPublisher notifications,
+            ShipmentPublisher shipmentEvents,
             PlatformTransactionManager transactionManager) {
         this.cartItems = cartItems;
         this.orders = orders;
@@ -75,6 +78,7 @@ public class CheckoutService {
         this.shipments = shipments;
         this.payments = payments;
         this.notifications = notifications;
+        this.shipmentEvents = shipmentEvents;
         this.tx = new TransactionTemplate(transactionManager);
         this.tx.setIsolationLevel(TransactionDefinition.ISOLATION_REPEATABLE_READ);
         this.tx.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRED);
@@ -95,9 +99,11 @@ public class CheckoutService {
             }
             return createPendingOrder(user, request, cart, mode);
         });
+        shipmentEvents.created(user, pending);
         PaymentCommand command = toPaymentCommand(user, pending, request, mode);
         PaymentResult result = payments.charge(command);
         CompletedCheckout completed = tx.execute(status -> completePayment(user.getId(), pending.getOrderNumber(), result));
+        shipmentEvents.paymentResult(user, completed.order(), result.success());
         String emailStatus = publishOrderNotification(
                 result.success() ? "PAYMENT_SUCCESS" : "PAYMENT_FAILURE",
                 user, completed.order(), completed.txn());
@@ -111,7 +117,6 @@ public class CheckoutService {
     public List<CustomerOrder> history(User user) {
         return tx.execute(status -> {
             List<CustomerOrder> list = orders.findByUserIdOrderByCreatedAtDesc(user.getId());
-            list.forEach(order -> shipments.refresh(order.getShipment()));
             log.info("Order history {} count={}", RequestMdc.describe(user), list.size());
             return list;
         });
@@ -256,7 +261,6 @@ public class CheckoutService {
                     log.warn("Order not found {} orderNumber={}", RequestMdc.describe(user), orderNumber);
                     return new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found");
                 });
-        shipments.refresh(order.getShipment());
         return order;
     }
 

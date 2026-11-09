@@ -44,6 +44,11 @@ public class KafkaConfig {
     }
 
     @Bean
+    public NewTopic shipmentCommandsTopic(@Value("${app.kafka.topics.shipment-commands}") String name) {
+        return TopicBuilder.name(name).partitions(3).replicas(1).build();
+    }
+
+    @Bean
     public ProducerFactory<String, Object> producerFactory(KafkaProperties properties) {
         Map<String, Object> config = new HashMap<>(properties.buildProducerProperties(null));
         config.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
