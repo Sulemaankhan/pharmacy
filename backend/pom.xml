@@ -12,9 +12,9 @@
     </parent>
 
     <groupId>com.pharmacy</groupId>
-    <artifactId>drugstore</artifactId>
+    <artifactId>pharmacy-service</artifactId>
     <version>1.0.0</version>
-    <name>Medicine Drugstore</name>
+    <name>Pharmacy Service</name>
 
     <properties>
         <java.version>17</java.version>

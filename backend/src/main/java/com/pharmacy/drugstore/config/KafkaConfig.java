@@ -80,7 +80,7 @@ public class KafkaConfig {
             ConsumerFactory<String, PaymentResult> paymentResultConsumerFactory,
             @Value("${app.kafka.topics.payment-replies}") String repliesTopic) {
         ContainerProperties containerProperties = new ContainerProperties(repliesTopic);
-        containerProperties.setGroupId("drugstore-payment-replies");
+        containerProperties.setGroupId("pharmacy-service-payment-replies");
         containerProperties.setMissingTopicsFatal(false);
         ConcurrentMessageListenerContainer<String, PaymentResult> replies =
                 new ConcurrentMessageListenerContainer<>(paymentResultConsumerFactory, containerProperties);
