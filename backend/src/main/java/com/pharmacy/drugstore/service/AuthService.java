@@ -6,9 +6,9 @@ import com.pharmacy.drugstore.dto.ForgotPasswordRequest;
 import com.pharmacy.drugstore.dto.ResetPasswordRequest;
 import com.pharmacy.drugstore.entity.PasswordResetToken;
 import com.pharmacy.drugstore.entity.User;
+import com.pharmacy.drugstore.kafka.NotificationCommands;
+import com.pharmacy.drugstore.kafka.NotificationPublisher;
 import com.pharmacy.drugstore.logging.RequestMdc;
-import com.pharmacy.drugstore.notification.MailClient;
-import com.pharmacy.drugstore.notification.PasswordResetEmailNotification;
 import com.pharmacy.drugstore.repository.PasswordResetTokenRepository;
 import com.pharmacy.drugstore.repository.UserRepository;
 import com.pharmacy.drugstore.security.JwtService;
@@ -38,7 +38,7 @@ public class AuthService {
     private final PasswordResetTokenRepository resetTokens;
     private final PasswordEncoder encoder;
     private final JwtService jwt;
-    private final MailClient mailClient;
+    private final NotificationPublisher notifications;
     private final String frontendBaseUrl;
 
     public AuthService(
@@ -46,13 +46,13 @@ public class AuthService {
             PasswordResetTokenRepository resetTokens,
             PasswordEncoder encoder,
             JwtService jwt,
-            MailClient mailClient,
+            NotificationPublisher notifications,
             @Value("${app.frontend.base-url:http://localhost:5173}") String frontendBaseUrl) {
         this.users = users;
         this.resetTokens = resetTokens;
         this.encoder = encoder;
         this.jwt = jwt;
-        this.mailClient = mailClient;
+        this.notifications = notifications;
         this.frontendBaseUrl = frontendBaseUrl == null || frontendBaseUrl.isBlank()
                 ? "http://localhost:5173" : frontendBaseUrl.trim().replaceAll("/$", "");
     }
@@ -120,9 +120,9 @@ public class AuthService {
         resetTokens.saveAndFlush(token);
 
         String resetUrl = frontendBaseUrl + "/reset-password?token=" + rawToken;
-        new PasswordResetEmailNotification(mailClient).send(user, resetUrl);
-        log.info("Forgot password email sent {}", RequestMdc.describe(user));
-        return Map.of("status", "SENT", "message", GENERIC_RESET_MESSAGE);
+        notifications.publish(NotificationCommands.passwordReset(user, resetUrl));
+        log.info("Forgot password email queued {}", RequestMdc.describe(user));
+        return Map.of("status", "QUEUED", "message", GENERIC_RESET_MESSAGE);
     }
 
     @Transactional

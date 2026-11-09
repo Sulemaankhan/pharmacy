@@ -1,0 +1,55 @@
+package com.pharmacy.drugstore.kafka;
+
+import org.apache.kafka.clients.producer.ProducerRecord;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.kafka.requestreply.ReplyingKafkaTemplate;
+import org.springframework.kafka.requestreply.RequestReplyFuture;
+import org.springframework.stereotype.Component;
+import java.util.concurrent.TimeUnit;
+
+@Component
+public class PaymentKafkaClient {
+    private static final Logger log = LoggerFactory.getLogger(PaymentKafkaClient.class);
+    private final ReplyingKafkaTemplate<String, Object, PaymentResult> template;
+    private final String commandsTopic;
+
+    public PaymentKafkaClient(
+            ReplyingKafkaTemplate<String, Object, PaymentResult> paymentReplyKafkaTemplate,
+            @Value("${app.kafka.topics.payment-commands}") String commandsTopic) {
+        this.template = paymentReplyKafkaTemplate;
+        this.commandsTopic = commandsTopic;
+    }
+
+    public PaymentResult charge(PaymentCommand command) {
+        log.info("Payment command published orderNumber={} mode={} topic={}",
+                command.orderNumber(), command.paymentMode(), commandsTopic);
+        ProducerRecord<String, Object> record =
+                new ProducerRecord<>(commandsTopic, command.orderNumber(), command);
+        try {
+            RequestReplyFuture<String, Object, PaymentResult> future = template.sendAndReceive(record);
+            PaymentResult result = future.get(20, TimeUnit.SECONDS).value();
+            if (result == null) {
+                return failed(command, "Payment service returned an empty result");
+            }
+            log.info("Payment result received orderNumber={} success={} message={}",
+                    command.orderNumber(), result.success(), result.message());
+            return result;
+        } catch (Exception ex) {
+            log.error("Payment kafka request failed orderNumber={}", command.orderNumber(), ex);
+            return failed(command, "Payment service did not respond. Please try again.");
+        }
+    }
+
+    private static PaymentResult failed(PaymentCommand command, String message) {
+        return new PaymentResult(
+                command.correlationId(),
+                command.orderNumber(),
+                command.transactionRef(),
+                false,
+                null,
+                message,
+                null);
+    }
+}

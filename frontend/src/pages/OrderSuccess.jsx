@@ -46,8 +46,9 @@ export default function OrderSuccess() {
         <div className="success-badge">{success ? '✓' : '!'}</div>
         <h2>{success ? 'Payment saved in database' : 'Payment not completed'}</h2>
         <p className="lead">{order?.message || (success ? 'Order confirmed. A success notification was emailed to your account.' : 'Payment failed. A failure notification was emailed to your account.')}</p>
-        {(order?.emailStatus === 'SENT' || passed?.emailStatus === 'SENT') && (
-          <p className="toast-ok">Notification emailed.</p>
+        {(order?.emailStatus === 'SENT' || order?.emailStatus === 'QUEUED'
+          || passed?.emailStatus === 'SENT' || passed?.emailStatus === 'QUEUED') && (
+          <p className="toast-ok">Notification queued for email.</p>
         )}
         {(order?.emailStatus === 'FAILED' || passed?.emailStatus === 'FAILED') && (
           <p className="error">Notification email could not be delivered. Use the button below to retry.</p>
