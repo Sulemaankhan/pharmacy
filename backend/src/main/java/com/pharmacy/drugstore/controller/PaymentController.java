@@ -1,7 +1,9 @@
 package com.pharmacy.drugstore.controller;
 
+import com.pharmacy.drugstore.dto.AccountSnapshot;
 import com.pharmacy.drugstore.dto.PaymentRequest;
 import com.pharmacy.drugstore.dto.PaymentResponse;
+import com.pharmacy.drugstore.kafka.PaymentGatewayClient;
 import com.pharmacy.drugstore.entity.CustomerOrder;
 import com.pharmacy.drugstore.entity.Shipment;
 import com.pharmacy.drugstore.entity.User;
@@ -23,11 +25,29 @@ public class PaymentController {
     private final CheckoutService checkoutService;
     private final ShipmentService shipmentService;
     private final AuthService authService;
+    private final PaymentGatewayClient accounts;
 
-    public PaymentController(CheckoutService checkoutService, ShipmentService shipmentService, AuthService authService) {
+    public PaymentController(
+            CheckoutService checkoutService,
+            ShipmentService shipmentService,
+            AuthService authService,
+            PaymentGatewayClient accounts) {
         this.checkoutService = checkoutService;
         this.shipmentService = shipmentService;
         this.authService = authService;
+        this.accounts = accounts;
+    }
+
+    @GetMapping("/account")
+    public AccountSnapshot account(Authentication auth) {
+        User current = user(auth);
+        return accounts.getAccount(current.getEmail(), current.getId(), current.getName());
+    }
+
+    @GetMapping("/account/pharmacy")
+    public AccountSnapshot pharmacyAccount(Authentication auth) {
+        user(auth);
+        return accounts.getPharmacyAccount();
     }
 
     @GetMapping("/payments/modes")

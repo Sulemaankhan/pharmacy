@@ -8,6 +8,7 @@ public record PaymentCommand(
         String transactionRef,
         String paymentMode,
         BigDecimal amount,
+        Long userId,
         String customerName,
         String customerEmail,
         String upiId,
@@ -17,5 +18,6 @@ public record PaymentCommand(
         String cvv,
         String bankName,
         String walletProvider,
-        String walletPhone
+        String walletPhone,
+        String action
 ) {}

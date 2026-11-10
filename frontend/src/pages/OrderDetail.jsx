@@ -167,6 +167,18 @@ export default function OrderDetail() {
           <h3>Payment</h3>
           <div className="summary-row"><span>Mode</span><span>{payment.paymentMode || '—'}</span></div>
           <div className="summary-row"><span>Txn ref</span><span>{payment.transactionRef || '—'}</span></div>
+          {payment.debitedAmount != null && (
+            <div className="summary-row"><span>Debited</span><span>{formatMoney(payment.debitedAmount)}</span></div>
+          )}
+          {payment.availableBalance != null && (
+            <div className="summary-row"><span>Your balance after debit</span><span>{formatMoney(payment.availableBalance)}</span></div>
+          )}
+          {payment.creditedAmount != null && (
+            <div className="summary-row"><span>Credited to pharmacy</span><span>{formatMoney(payment.creditedAmount)}</span></div>
+          )}
+          {payment.pharmacyBalance != null && (
+            <div className="summary-row"><span>Pharmacy balance</span><span>{formatMoney(payment.pharmacyBalance)}</span></div>
+          )}
           <div className="summary-row"><span>Ledger</span><span>{payment.ledgerPosted ? 'Posted' : 'Not posted'}</span></div>
           <div className="summary-row"><span>Subtotal</span><span>{formatMoney(order.subtotal)}</span></div>
           <div className="summary-row"><span>Shipping</span><span>{Number(order.shipping) === 0 ? 'Free' : formatMoney(order.shipping)}</span></div>

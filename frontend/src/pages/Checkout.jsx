@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useStore } from '../store'
 import { formatMoney } from '../money'
 import { api } from '../api'
 import { clientLog } from '../log'
+import { connectAccountSocket, fetchAccount } from '../account'
 
 const MODES = [
   { code: 'UPI', label: 'UPI', hint: 'GPay / PhonePe / Paytm' },
@@ -61,6 +62,18 @@ export default function Checkout() {
   })
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const [account, setAccount] = useState(null)
+
+  useEffect(() => {
+    if (!user?.userId) return undefined
+    fetchAccount()
+      .then(setAccount)
+      .catch(() => {})
+    return connectAccountSocket({
+      userId: user.userId,
+      onUpdate: (update) => setAccount((prev) => ({ ...prev, ...update })),
+    })
+  }, [user?.userId])
 
   const set = (key) => (e) => setForm({ ...form, [key]: e.target.value })
 
@@ -179,6 +192,7 @@ export default function Checkout() {
               <div>
                 <label>Pincode</label>
                 <input value={form.pincode} onChange={set('pincode')} placeholder="6 digits" maxLength="6" required />
+                <p className="muted" style={{ marginTop: 6 }}>Pincode 999999 is not serviceable. That purchase is rolled back and refunded.</p>
               </div>
             </div>
             <div className="split-2">
@@ -258,6 +272,12 @@ export default function Checkout() {
 
         <aside className="summary">
           <h3>Pay {formatMoney(grand)}</h3>
+          {account?.availableBalance != null && (
+            <div className="summary-row">
+              <span>Available balance</span>
+              <b>{formatMoney(account.availableBalance)}</b>
+            </div>
+          )}
           {cart.map((item) => (
             <div className="summary-row" key={item.id}>
               <span>{item.product.name} × {item.quantity}</span>
@@ -266,6 +286,11 @@ export default function Checkout() {
           ))}
           <div className="summary-row"><span>Shipping</span><span>{shipping === 0 ? 'Free' : formatMoney(shipping)}</span></div>
           <div className="summary-row total"><span>Total</span><span>{formatMoney(grand)}</span></div>
+          {account?.availableBalance != null && Number(account.availableBalance) < grand && (
+            <p className="error" style={{ marginTop: 12 }}>
+              Insufficient balance. Available {formatMoney(account.availableBalance)}, required {formatMoney(grand)}.
+            </p>
+          )}
           <button className="btn full" disabled={busy || !canPay} style={{ marginTop: 16 }}>
             {busy ? 'Processing…' : `Pay with ${MODES.find((m) => m.code === mode).label}`}
           </button>

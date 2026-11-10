@@ -11,6 +11,10 @@ export default defineConfig({
         target: 'http://localhost:8085',
         ws: true,
       },
+      '/ws/accounts': {
+        target: 'http://localhost:8086',
+        ws: true,
+      },
     }
   }
 })

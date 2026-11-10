@@ -15,6 +15,11 @@ public class KafkaConfig {
     }
 
     @Bean
+    public NewTopic shipmentRepliesTopic(@Value("${app.kafka.topics.shipment-replies}") String name) {
+        return TopicBuilder.name(name).partitions(3).replicas(1).build();
+    }
+
+    @Bean
     public NewTopic shipmentUpdatesTopic(@Value("${app.kafka.topics.shipment-updates}") String name) {
         return TopicBuilder.name(name).partitions(3).replicas(1).build();
     }

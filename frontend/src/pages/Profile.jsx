@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useStore } from '../store'
 import ProfileTabs from '../components/ProfileTabs'
+import { connectAccountSocket, fetchAccount, fetchPharmacyAccount } from '../account'
+import { formatMoney } from '../money'
 
 function formatWhen(iso) {
   if (!iso) return '—'
@@ -31,10 +33,33 @@ export default function Profile() {
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
   const [busy, setBusy] = useState(false)
+  const [account, setAccount] = useState(null)
+  const [pharmacy, setPharmacy] = useState(null)
 
   useEffect(() => {
     if (!dirty) setForm(fromProfile(profile, user))
   }, [profile, user, dirty])
+
+  useEffect(() => {
+    if (!user?.userId) return undefined
+    fetchAccount()
+      .then(setAccount)
+      .catch((e) => setError(e.message))
+    fetchPharmacyAccount()
+      .then(setPharmacy)
+      .catch(() => {})
+    return connectAccountSocket({
+      userId: user.userId,
+      onUpdate: (update) => {
+        setAccount((prev) => ({
+          ...prev,
+          ...update,
+          transactions: update.transactions?.length ? update.transactions : prev?.transactions,
+        }))
+        fetchPharmacyAccount().then(setPharmacy).catch(() => {})
+      },
+    })
+  }, [user?.userId])
 
   if (!user) {
     return (
@@ -121,6 +146,10 @@ export default function Profile() {
           <p className="status-pill ok" style={{ marginTop: 10 }}>{user.role || 'USER'}</p>
           <p className="muted" style={{ marginTop: 12 }}>Member since {formatWhen(user.createdAt || live.createdAt)}</p>
           <div className="profile-stats">
+            <div className="profile-stat">
+              <b>{account?.availableBalance == null ? '—' : formatMoney(account.availableBalance)}</b>
+              <span>Available balance</span>
+            </div>
             <Link to="/orders" className="profile-stat">
               <b>{orders}</b>
               <span>Orders</span>
@@ -174,6 +203,43 @@ export default function Profile() {
           <button className="btn" style={{ marginTop: 16 }} disabled={busy}>{busy ? 'Saving...' : 'Save profile'}</button>
         </form>
       </div>
+
+      <div id="account" className="panel wide" style={{ marginTop: 18 }}>
+        <h3>Your account</h3>
+        <p className="muted">Live balance after each purchase. New accounts start with ₹10,000. Purchases debit this wallet and credit the pharmacy account.</p>
+        <TxnTable rows={account?.transactions} />
+      </div>
+
+      <div id="pharmacy-account" className="panel wide" style={{ marginTop: 18 }}>
+        <h3>Pharmacy account</h3>
+        <p className="muted">
+          Sales wallet {pharmacy?.email ? `· ${pharmacy.email}` : ''}.
+          Balance {pharmacy?.availableBalance == null ? '—' : formatMoney(pharmacy.availableBalance)}.
+        </p>
+        <TxnTable rows={pharmacy?.transactions} empty="No pharmacy credits yet. Complete a purchase to credit this account." />
+      </div>
+    </div>
+  )
+}
+
+function TxnTable({ rows, empty = 'No account transactions yet.' }) {
+  if (!rows || rows.length === 0) {
+    return <p className="muted" style={{ marginTop: 10 }}>{empty}</p>
+  }
+  return (
+    <div className="summary" style={{ marginTop: 12 }}>
+      {rows.map((txn) => (
+        <div className="summary-row" key={txn.id || txn.transactionRef || txn.createdAt}>
+          <span>
+            {txn.type} {txn.orderNumber ? `· ${txn.orderNumber}` : ''}
+            <div className="muted">{formatWhen(txn.createdAt)} {txn.description ? `· ${txn.description}` : ''}</div>
+          </span>
+          <b className={txn.type === 'DEBIT' ? 'error' : ''}>
+            {txn.type === 'DEBIT' ? '-' : '+'}{formatMoney(txn.amount)}
+            <div className="muted">Bal {formatMoney(txn.balanceAfter)}</div>
+          </b>
+        </div>
+      ))}
     </div>
   )
 }

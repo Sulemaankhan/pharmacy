@@ -22,9 +22,20 @@ public class PaymentKafkaClient {
         this.commandsTopic = commandsTopic;
     }
 
+    public PaymentResult refund(PaymentCommand command) {
+        PaymentCommand refund = withAction(command, "REFUND");
+        log.info("Payment refund published orderNumber={} topic={}", refund.orderNumber(), commandsTopic);
+        return send(refund, "Refund service did not respond. Please try again.");
+    }
+
     public PaymentResult charge(PaymentCommand command) {
-        log.info("Payment command published orderNumber={} mode={} topic={}",
-                command.orderNumber(), command.paymentMode(), commandsTopic);
+        PaymentCommand charge = withAction(command, command.action() == null ? "CHARGE" : command.action());
+        log.info("Payment command published orderNumber={} mode={} action={} topic={}",
+                charge.orderNumber(), charge.paymentMode(), charge.action(), commandsTopic);
+        return send(charge, "Payment service did not respond. Please try again.");
+    }
+
+    private PaymentResult send(PaymentCommand command, String timeoutMessage) {
         ProducerRecord<String, Object> record =
                 new ProducerRecord<>(commandsTopic, command.orderNumber(), command);
         try {
@@ -38,8 +49,32 @@ public class PaymentKafkaClient {
             return result;
         } catch (Exception ex) {
             log.error("Payment kafka request failed orderNumber={}", command.orderNumber(), ex);
-            return failed(command, "Payment service did not respond. Please try again.");
+            return failed(command, timeoutMessage);
         }
+    }
+
+    private static PaymentCommand withAction(PaymentCommand command, String action) {
+        if (command == null) {
+            return null;
+        }
+        return new PaymentCommand(
+                command.correlationId(),
+                command.orderNumber(),
+                command.transactionRef(),
+                command.paymentMode(),
+                command.amount(),
+                command.userId(),
+                command.customerName(),
+                command.customerEmail(),
+                command.upiId(),
+                command.cardNumber(),
+                command.cardHolder(),
+                command.expiry(),
+                command.cvv(),
+                command.bankName(),
+                command.walletProvider(),
+                command.walletPhone(),
+                action);
     }
 
     private static PaymentResult failed(PaymentCommand command, String message) {
@@ -50,6 +85,10 @@ public class PaymentKafkaClient {
                 false,
                 null,
                 message,
+                null,
+                null,
+                null,
+                null,
                 null);
     }
 }

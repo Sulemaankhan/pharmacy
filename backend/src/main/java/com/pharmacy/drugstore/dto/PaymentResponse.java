@@ -24,7 +24,11 @@ public record PaymentResponse(
         String recipientName,
         String address,
         String contactNumber,
-        String deliveryEmail
+        String deliveryEmail,
+        BigDecimal debitedAmount,
+        BigDecimal availableBalance,
+        BigDecimal creditedAmount,
+        BigDecimal pharmacyBalance
 ) {
     public record Item(String name, int quantity, BigDecimal unitPrice) {}
 }

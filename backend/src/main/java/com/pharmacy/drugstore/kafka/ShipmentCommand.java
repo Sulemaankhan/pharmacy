@@ -19,5 +19,6 @@ public record ShipmentCommand(
         String email,
         String carrier,
         Instant estimatedDelivery,
-        Instant createdAt
+        Instant createdAt,
+        String correlationId
 ) {}

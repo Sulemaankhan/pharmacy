@@ -13,10 +13,9 @@ import com.pharmacy.drugstore.kafka.NotificationCommand;
 import com.pharmacy.drugstore.kafka.NotificationCommands;
 import com.pharmacy.drugstore.kafka.NotificationPublisher;
 import com.pharmacy.drugstore.kafka.PaymentCommand;
-import com.pharmacy.drugstore.kafka.PaymentKafkaClient;
 import com.pharmacy.drugstore.kafka.PaymentResult;
-import com.pharmacy.drugstore.kafka.ShipmentPublisher;
 import com.pharmacy.drugstore.payment.PaymentMode;
+import com.pharmacy.drugstore.saga.CheckoutSagaOrchestrator;
 import com.pharmacy.drugstore.payment.PaymentStatus;
 import com.pharmacy.drugstore.repository.CartItemRepository;
 import com.pharmacy.drugstore.repository.CustomerOrderRepository;
@@ -25,6 +24,7 @@ import com.pharmacy.drugstore.repository.ProductRepository;
 import com.pharmacy.drugstore.logging.RequestMdc;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -54,9 +54,8 @@ public class CheckoutService {
     private final ProductRepository products;
     private final LedgerPostingService ledger;
     private final ShipmentService shipments;
-    private final PaymentKafkaClient payments;
     private final NotificationPublisher notifications;
-    private final ShipmentPublisher shipmentEvents;
+    private final CheckoutSagaOrchestrator saga;
     private final TransactionTemplate tx;
 
     public CheckoutService(
@@ -66,9 +65,8 @@ public class CheckoutService {
             ProductRepository products,
             LedgerPostingService ledger,
             ShipmentService shipments,
-            PaymentKafkaClient payments,
             NotificationPublisher notifications,
-            ShipmentPublisher shipmentEvents,
+            @Lazy CheckoutSagaOrchestrator saga,
             PlatformTransactionManager transactionManager) {
         this.cartItems = cartItems;
         this.orders = orders;
@@ -76,21 +74,21 @@ public class CheckoutService {
         this.products = products;
         this.ledger = ledger;
         this.shipments = shipments;
-        this.payments = payments;
         this.notifications = notifications;
-        this.shipmentEvents = shipmentEvents;
+        this.saga = saga;
         this.tx = new TransactionTemplate(transactionManager);
         this.tx.setIsolationLevel(TransactionDefinition.ISOLATION_REPEATABLE_READ);
         this.tx.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRED);
     }
 
     public PaymentResponse checkout(User user, PaymentRequest request) {
-        log.info("Checkout start {} mode={}",
-                RequestMdc.describe(user), request == null ? null : request.paymentMode());
         shipments.requireDelivery(request, user);
         PaymentMode mode = parseMode(request == null ? null : request.paymentMode());
+        return saga.execute(user, request, mode);
+    }
 
-        CustomerOrder pending = tx.execute(status -> {
+    public CustomerOrder reserveStock(User user, PaymentRequest request, PaymentMode mode) {
+        return tx.execute(status -> {
             List<CartItem> cart = cartItems.findByUserId(user.getId());
             log.info("Checkout cart {} cartItems={}", RequestMdc.describe(user), cart.size());
             if (cart.isEmpty()) {
@@ -99,19 +97,105 @@ public class CheckoutService {
             }
             return createPendingOrder(user, request, cart, mode);
         });
-        shipmentEvents.created(user, pending);
-        PaymentCommand command = toPaymentCommand(user, pending, request, mode);
-        PaymentResult result = payments.charge(command);
-        CompletedCheckout completed = tx.execute(status -> completePayment(user.getId(), pending.getOrderNumber(), result));
-        shipmentEvents.paymentResult(user, completed.order(), result.success());
-        String emailStatus = publishOrderNotification(
-                result.success() ? "PAYMENT_SUCCESS" : "PAYMENT_FAILURE",
-                user, completed.order(), completed.txn());
-        log.info("Checkout finished {} orderNumber={} success={} email={}",
-                RequestMdc.describe(user), completed.order().getOrderNumber(), result.success(), emailStatus);
-        return toResponse(result.success(), completed.order(), completed.txn(),
-                completed.message() + " " + emailPhrase(emailStatus, recipients(user, completed.order())),
-                emailStatus);
+    }
+
+    public PaymentCommand paymentCommand(User user, CustomerOrder order, PaymentRequest request, PaymentMode mode) {
+        return toPaymentCommand(user, order, request, mode);
+    }
+
+    public void recordCapture(Long userId, String orderNumber, PaymentResult result) {
+        tx.execute(status -> {
+            CustomerOrder order = orders.findByOrderNumberAndUserId(orderNumber, userId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
+            PaymentTransaction txn = requireTxn(order);
+            applyGateway(txn, result);
+            transactions.saveAndFlush(txn);
+            orders.saveAndFlush(order);
+            return order;
+        });
+    }
+
+    public CompletedCheckout completeSuccess(Long userId, String orderNumber, PaymentResult result) {
+        return tx.execute(status -> {
+            CustomerOrder order = orders.findByOrderNumberAndUserId(orderNumber, userId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
+            PaymentTransaction txn = requireTxn(order);
+            applyGateway(txn, result);
+            txn.setStatus(PaymentStatus.SUCCESS);
+            order.setStatus(PaymentStatus.SUCCESS);
+            shipments.markPaymentResult(order.getShipment(), true);
+            if (!txn.isLedgerPosted()) {
+                ledger.post(txn);
+            }
+            cartItems.deleteByUserId(userId);
+            transactions.saveAndFlush(txn);
+            orders.saveAndFlush(order);
+            log.info("Checkout success orderNumber={} txn={} ledgerPosted={}",
+                    order.getOrderNumber(), txn.getTransactionRef(), txn.isLedgerPosted());
+            return new CompletedCheckout(order, txn, "Payment posted to ledger.");
+        });
+    }
+
+    public CompletedCheckout failLocal(Long userId, String orderNumber, String reason, boolean refunded) {
+        return tx.execute(status -> {
+            CustomerOrder order = orders.findByOrderNumberAndUserId(orderNumber, userId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
+            PaymentTransaction txn = requireTxn(order);
+            if (txn.isLedgerPosted()) {
+                ledger.reverse(txn);
+            }
+            if (order.getStatus() != PaymentStatus.FAILED) {
+                restoreStock(order);
+            }
+            txn.setStatus(PaymentStatus.FAILED);
+            txn.setGatewayMessage(reason);
+            txn.setCompletedAt(Instant.now());
+            if (refunded) {
+                txn.setRefunded(true);
+            }
+            order.setStatus(PaymentStatus.FAILED);
+            shipments.markPaymentResult(order.getShipment(), false);
+            transactions.saveAndFlush(txn);
+            orders.saveAndFlush(order);
+            log.warn("Checkout rolled back orderNumber={} refunded={} reason={}",
+                    order.getOrderNumber(), refunded, reason);
+            return new CompletedCheckout(order, txn, reason);
+        });
+    }
+
+    public void markRefunded(Long userId, String orderNumber, PaymentResult refund) {
+        tx.execute(status -> {
+            CustomerOrder order = orders.findByOrderNumberAndUserId(orderNumber, userId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
+            PaymentTransaction txn = requireTxn(order);
+            txn.setRefunded(true);
+            txn.setRefundedAmount(refund == null ? txn.getAmount() : refund.creditedAmount());
+            if (refund != null) {
+                txn.setAvailableBalance(refund.availableBalance());
+                txn.setPharmacyBalance(refund.pharmacyBalance());
+                txn.setGatewayMessage(refund.message());
+            }
+            transactions.saveAndFlush(txn);
+            return order;
+        });
+    }
+
+    public String notifyOrder(String kind, User user, CustomerOrder order, PaymentTransaction txn) {
+        return publishOrderNotification(kind, user, order, txn);
+    }
+
+    public String emailPhrase(String emailStatus, User user, CustomerOrder order) {
+        return emailPhrase(emailStatus, recipients(user, order));
+    }
+
+    public PaymentResponse toPaymentResponse(
+            boolean success,
+            CustomerOrder order,
+            PaymentTransaction txn,
+            String message,
+            String emailStatus,
+            PaymentResult result) {
+        return toResponse(success, order, txn, message, emailStatus, result);
     }
 
     public List<CustomerOrder> history(User user) {
@@ -202,44 +286,6 @@ public class CheckoutService {
         return order;
     }
 
-    private CompletedCheckout completePayment(Long userId, String orderNumber, PaymentResult result) {
-        CustomerOrder order = orders.findByOrderNumberAndUserId(orderNumber, userId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
-        PaymentTransaction txn = order.getPayment();
-        if (txn == null) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Order is missing a payment transaction");
-        }
-        txn.setGatewayMessage(result.message());
-        txn.setMaskedInstrument(result.maskedInstrument());
-        txn.setCompletedAt(Instant.now());
-
-        if (!result.success()) {
-            txn.setStatus(PaymentStatus.FAILED);
-            order.setStatus(PaymentStatus.FAILED);
-            shipments.markPaymentResult(order.getShipment(), false);
-            restoreStock(order);
-            transactions.saveAndFlush(txn);
-            orders.saveAndFlush(order);
-            log.warn("Checkout failed orderNumber={} txn={} message={}",
-                    order.getOrderNumber(), txn.getTransactionRef(), result.message());
-            return new CompletedCheckout(order, txn, result.message());
-        }
-
-        if (result.gatewayRef() != null) {
-            txn.setTransactionRef(result.gatewayRef());
-        }
-        txn.setStatus(PaymentStatus.SUCCESS);
-        order.setStatus(PaymentStatus.SUCCESS);
-        shipments.markPaymentResult(order.getShipment(), true);
-        ledger.post(txn);
-        cartItems.deleteByUserId(userId);
-        transactions.saveAndFlush(txn);
-        orders.saveAndFlush(order);
-        log.info("Checkout success orderNumber={} txn={} ledgerPosted={}",
-                order.getOrderNumber(), txn.getTransactionRef(), txn.isLedgerPosted());
-        return new CompletedCheckout(order, txn, "Payment posted to ledger.");
-    }
-
     private String publishOrderNotification(String kind, User user, CustomerOrder order, PaymentTransaction txn) {
         try {
             NotificationCommand command = NotificationCommands.forOrder(kind, user, order, txn);
@@ -286,14 +332,37 @@ public class CheckoutService {
         return products.lockAllById(ids).stream().collect(Collectors.toMap(Product::getId, Function.identity()));
     }
 
+    private PaymentTransaction requireTxn(CustomerOrder order) {
+        PaymentTransaction txn = order.getPayment();
+        if (txn == null) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Order is missing a payment transaction");
+        }
+        return txn;
+    }
+
+    private static void applyGateway(PaymentTransaction txn, PaymentResult result) {
+        if (result == null) {
+            return;
+        }
+        txn.setGatewayMessage(result.message());
+        txn.setMaskedInstrument(result.maskedInstrument());
+        txn.setDebitedAmount(result.debitedAmount());
+        txn.setAvailableBalance(result.availableBalance());
+        txn.setCreditedAmount(result.creditedAmount());
+        txn.setPharmacyBalance(result.pharmacyBalance());
+        txn.setCompletedAt(Instant.now());
+    }
+
     private static PaymentCommand toPaymentCommand(User user, CustomerOrder order, PaymentRequest request, PaymentMode mode) {
         PaymentTransaction txn = order.getPayment();
+        PaymentMode resolved = mode != null ? mode : txn.getPaymentMode();
         return new PaymentCommand(
                 UUID.randomUUID().toString(),
                 order.getOrderNumber(),
                 txn.getTransactionRef(),
-                mode.name(),
+                resolved == null ? null : resolved.name(),
                 txn.getAmount(),
+                user.getId(),
                 user.getName(),
                 user.getEmail(),
                 request == null ? null : request.upiId(),
@@ -303,7 +372,8 @@ public class CheckoutService {
                 request == null ? null : request.cvv(),
                 request == null ? null : request.bankName(),
                 request == null ? null : request.walletProvider(),
-                request == null ? null : request.walletPhone());
+                request == null ? null : request.walletPhone(),
+                "CHARGE");
     }
 
     private static String recipients(User user, CustomerOrder order) {
@@ -334,7 +404,7 @@ public class CheckoutService {
     }
 
     private PaymentResponse toResponse(boolean success, CustomerOrder order, PaymentTransaction txn,
-                                       String message, String emailStatus) {
+                                       String message, String emailStatus, PaymentResult result) {
         List<PaymentResponse.Item> items = order.getItems().stream()
                 .map(i -> new PaymentResponse.Item(i.getProductName(), i.getQuantity(), i.getUnitPrice()))
                 .toList();
@@ -357,8 +427,12 @@ public class CheckoutService {
                 shipment == null ? null : shipment.getRecipientName(),
                 shipment == null ? null : shipment.getFullAddress(),
                 shipment == null ? null : shipment.getContactNumber(),
-                shipment == null ? null : shipment.getEmail());
+                shipment == null ? null : shipment.getEmail(),
+                result == null ? null : result.debitedAmount(),
+                result == null ? null : result.availableBalance(),
+                result == null ? null : result.creditedAmount(),
+                result == null ? null : result.pharmacyBalance());
     }
 
-    private record CompletedCheckout(CustomerOrder order, PaymentTransaction txn, String message) {}
+    public record CompletedCheckout(CustomerOrder order, PaymentTransaction txn, String message) {}
 }

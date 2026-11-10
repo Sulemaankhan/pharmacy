@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import { formatMoney } from '../money'
 import { api } from '../api'
+import { fetchAccount, fetchPharmacyAccount } from '../account'
 
 export default function OrderSuccess() {
   const { orderNumber } = useParams()
@@ -10,6 +11,8 @@ export default function OrderSuccess() {
   const [error, setError] = useState('')
   const [emailing, setEmailing] = useState(false)
   const [emailMsg, setEmailMsg] = useState('')
+  const [account, setAccount] = useState(null)
+  const [pharmacy, setPharmacy] = useState(null)
 
   useEffect(() => {
     api(`/api/orders/${orderNumber}`)
@@ -21,6 +24,8 @@ export default function OrderSuccess() {
         message: prev?.message,
       })))
       .catch((e) => setError(e.message))
+    fetchAccount().then(setAccount).catch(() => {})
+    fetchPharmacyAccount().then(setPharmacy).catch(() => {})
   }, [orderNumber])
 
   async function emailOrder() {
@@ -39,6 +44,10 @@ export default function OrderSuccess() {
 
   const payment = order?.payment
   const success = order?.success !== false && (order?.status ? order.status === 'SUCCESS' : true)
+  const debited = order?.debitedAmount ?? payment?.debitedAmount
+  const available = account?.availableBalance ?? order?.availableBalance ?? payment?.availableBalance
+  const credited = order?.creditedAmount ?? payment?.creditedAmount
+  const pharmacyBalance = pharmacy?.availableBalance ?? order?.pharmacyBalance ?? payment?.pharmacyBalance
 
   return (
     <div className="container page">
@@ -76,6 +85,21 @@ export default function OrderSuccess() {
           )}
           {(order?.paymentMode || payment?.paymentMode) && <div className="summary-row"><span>Mode</span><b>{order.paymentMode || payment.paymentMode}</b></div>}
           {(order?.amount != null || payment?.amount != null) && <div className="summary-row"><span>Amount</span><b>{formatMoney(order.amount ?? payment.amount)}</b></div>}
+          {debited != null && (
+            <div className="summary-row"><span>Debited</span><b>{formatMoney(debited)}</b></div>
+          )}
+          {available != null && (
+            <div className="summary-row"><span>Your balance</span><b>{formatMoney(available)}</b></div>
+          )}
+          {credited != null && (
+            <div className="summary-row"><span>Credited to pharmacy</span><b>{formatMoney(credited)}</b></div>
+          )}
+          {pharmacyBalance != null && (
+            <div className="summary-row"><span>Pharmacy balance</span><b>{formatMoney(pharmacyBalance)}</b></div>
+          )}
+          {(order?.refunded || payment?.refunded) && (
+            <div className="summary-row"><span>Refund</span><b>{formatMoney(order?.refundedAmount ?? payment?.refundedAmount ?? debited ?? order?.amount ?? payment?.amount)}</b></div>
+          )}
           <div className="summary-row"><span>Ledger</span><b>{(order?.ledgerPosted || payment?.ledgerPosted) ? 'Posted (debit + credit)' : 'Not posted'}</b></div>
         </div>
         <Link className="btn full" to="/shop" style={{ marginTop: 18 }}>Continue shopping</Link>

@@ -9,13 +9,17 @@ import com.pharmacy.shipment.repository.ShipmentRepository;
 import com.pharmacy.shipment.shipment.ShipmentStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.pharmacy.shipment.event.ShipmentResult;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Arrays;
+import java.util.Set;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class ShipmentTrackingService {
@@ -32,31 +36,36 @@ public class ShipmentTrackingService {
     private final ShipmentHub hub;
     private final KafkaTemplate<String, Object> kafka;
     private final String updatesTopic;
+    private final Set<String> unserviceablePincodes;
 
     public ShipmentTrackingService(
             ShipmentRepository shipments,
             ShipmentHub hub,
             KafkaTemplate<String, Object> kafka,
-            @Value("${app.kafka.topics.shipment-updates}") String updatesTopic) {
+            @Value("${app.kafka.topics.shipment-updates}") String updatesTopic,
+            @Value("${app.shipment.unserviceable-pincodes:999999,000000}") String unserviceablePincodes) {
         this.shipments = shipments;
         this.hub = hub;
         this.kafka = kafka;
         this.updatesTopic = updatesTopic;
+        this.unserviceablePincodes = Arrays.stream(unserviceablePincodes.split(","))
+                .map(String::trim)
+                .filter(code -> !code.isBlank())
+                .collect(Collectors.toSet());
     }
 
     @Transactional
-    public void handle(ShipmentCommand command) {
+    public ShipmentResult handle(ShipmentCommand command) {
         if (command == null || command.type() == null) {
-            return;
+            return ShipmentResult.fail(command, "Shipment command was empty");
         }
         String type = command.type().trim().toUpperCase();
-        if ("CREATE".equals(type)) {
-            applyCreate(command);
-            return;
-        }
-        if ("PAYMENT_RESULT".equals(type)) {
-            applyPayment(command);
-        }
+        return switch (type) {
+            case "CREATE", "RESERVE" -> applyReserve(command);
+            case "CANCEL" -> applyCancel(command);
+            case "PAYMENT_RESULT" -> applyPayment(command);
+            default -> ShipmentResult.fail(command, "Unsupported shipment command " + type);
+        };
     }
 
     @Transactional
@@ -70,33 +79,48 @@ public class ShipmentTrackingService {
         active.forEach(this::advance);
     }
 
-    private void applyCreate(ShipmentCommand command) {
-        Shipment shipment = find(command);
-        if (shipment == null) {
-            log.warn("Shipment create ignored missing row tracking={} orderNumber={}",
-                    command.trackingNumber(), command.orderNumber());
-            return;
+    private ShipmentResult applyReserve(ShipmentCommand command) {
+        if (!serviceable(command.pincode())) {
+            Shipment shipment = findOrCreate(command);
+            shipment.setStatus(ShipmentStatus.CANCELLED);
+            copyDetails(shipment, command);
+            publish(save(shipment));
+            String message = "Shipment not available for pincode " + command.pincode();
+            log.warn("Shipment unavailable tracking={} pincode={}", command.trackingNumber(), command.pincode());
+            return ShipmentResult.fail(command, message);
+        }
+        Shipment shipment = findOrCreate(command);
+        if (shipment.getStatus() == ShipmentStatus.CANCELLED) {
+            copyDetails(shipment, command);
+            shipment.setStatus(ShipmentStatus.PENDING);
         }
         copyDetails(shipment, command);
-        if (shipment.getStatus() == null) {
+        if (shipment.getStatus() == null || shipment.getStatus() == ShipmentStatus.PENDING) {
             shipment.setStatus(ShipmentStatus.PENDING);
         }
         publish(save(shipment));
-        log.info("Shipment registered tracking={} orderNumber={}",
+        log.info("Shipment reserved tracking={} orderNumber={}",
                 shipment.getTrackingNumber(), shipment.getOrderNumber());
+        return ShipmentResult.ok(command, shipment.getStatus().name(), "Shipment reserved");
     }
 
-    private void applyPayment(ShipmentCommand command) {
-        Shipment shipment = find(command);
-        if (shipment == null) {
-            log.warn("Shipment payment ignored missing row tracking={} orderNumber={}",
-                    command.trackingNumber(), command.orderNumber());
-            return;
-        }
+    private ShipmentResult applyCancel(ShipmentCommand command) {
+        Shipment shipment = findOrCreate(command);
+        copyDetails(shipment, command);
+        shipment.setStatus(ShipmentStatus.CANCELLED);
+        publish(save(shipment));
+        log.info("Shipment cancelled tracking={} orderNumber={}",
+                shipment.getTrackingNumber(), shipment.getOrderNumber());
+        return ShipmentResult.ok(command, ShipmentStatus.CANCELLED.name(), "Shipment cancelled");
+    }
+
+    private ShipmentResult applyPayment(ShipmentCommand command) {
+        Shipment shipment = findOrCreate(command);
         copyDetails(shipment, command);
         boolean paid = Boolean.TRUE.equals(command.paid());
         if (paid) {
-            if (shipment.getStatus() == ShipmentStatus.PENDING || shipment.getStatus() == null) {
+            if (shipment.getStatus() == ShipmentStatus.PENDING || shipment.getStatus() == null
+                    || shipment.getStatus() == ShipmentStatus.CANCELLED) {
                 shipment.setStatus(ShipmentStatus.CONFIRMED);
             }
         } else {
@@ -105,6 +129,41 @@ public class ShipmentTrackingService {
         publish(save(shipment));
         log.info("Shipment payment applied tracking={} paid={} status={}",
                 shipment.getTrackingNumber(), paid, shipment.getStatus());
+        return ShipmentResult.ok(command, shipment.getStatus().name(),
+                paid ? "Shipment confirmed after payment" : "Shipment cancelled after payment failure");
+    }
+
+    private boolean serviceable(String pincode) {
+        if (pincode == null || pincode.isBlank() || pincode.trim().length() != 6) {
+            return false;
+        }
+        return !unserviceablePincodes.contains(pincode.trim());
+    }
+
+    private Shipment findOrCreate(ShipmentCommand command) {
+        Shipment shipment = find(command);
+        if (shipment != null) {
+            return shipment;
+        }
+        shipment = new Shipment();
+        shipment.setTrackingNumber(command.trackingNumber());
+        shipment.setRecipientName(blankToDash(command.recipientName()));
+        shipment.setAddress(blankToDash(command.address()));
+        shipment.setCity(blankToDash(command.city()));
+        shipment.setState(blankToDash(command.state()));
+        shipment.setPincode(command.pincode() == null ? "000000" : command.pincode());
+        shipment.setContactNumber(blankToDash(command.contactNumber()));
+        shipment.setEmail(notBlank(command.email()) ? command.email() : blankToDash(command.customerEmail()));
+        shipment.setStatus(ShipmentStatus.PENDING);
+        shipment.setOrderId(command.orderId());
+        shipment.setUserId(command.userId());
+        shipment.setOrderNumber(command.orderNumber());
+        shipment.setCreatedAt(command.createdAt() == null ? Instant.now() : command.createdAt());
+        return shipment;
+    }
+
+    private static String blankToDash(String value) {
+        return value == null || value.isBlank() ? "-" : value.trim();
     }
 
     private void advance(Shipment shipment) {

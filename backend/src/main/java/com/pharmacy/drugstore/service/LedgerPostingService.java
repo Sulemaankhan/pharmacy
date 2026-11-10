@@ -34,7 +34,7 @@ public class LedgerPostingService {
         }
 
         LedgerAccount debit = lock(clearingAccount(txn.getPaymentMode()));
-        LedgerAccount credit = lock("MERCHANT_SALES");
+        LedgerAccount credit = lockOrCreate("PHARMACY_WALLET", "Pharmacy account", "ASSET");
 
         addEntry(txn, debit, "DEBIT", amount);
         addEntry(txn, credit, "CREDIT", amount);
@@ -44,8 +44,30 @@ public class LedgerPostingService {
         accounts.save(debit);
         accounts.save(credit);
         txn.setLedgerPosted(true);
+        txn.setLedgerReversed(false);
         log.info("Ledger posted txn={} amount={} debit={} credit={}",
                 txn.getTransactionRef(), amount, debit.getCode(), credit.getCode());
+    }
+
+    public void reverse(PaymentTransaction txn) {
+        if (txn == null || !txn.isLedgerPosted() || txn.isLedgerReversed()) {
+            return;
+        }
+        BigDecimal amount = txn.getAmount();
+        if (amount == null || amount.signum() <= 0) {
+            return;
+        }
+        LedgerAccount debit = lock(clearingAccount(txn.getPaymentMode()));
+        LedgerAccount credit = lockOrCreate("PHARMACY_WALLET", "Pharmacy account", "ASSET");
+        addEntry(txn, credit, "DEBIT", amount);
+        addEntry(txn, debit, "CREDIT", amount);
+        debit.setBalance(debit.getBalance().subtract(amount));
+        credit.setBalance(credit.getBalance().subtract(amount));
+        accounts.save(debit);
+        accounts.save(credit);
+        txn.setLedgerPosted(false);
+        txn.setLedgerReversed(true);
+        log.info("Ledger reversed txn={} amount={}", txn.getTransactionRef(), amount);
     }
 
     private void addEntry(PaymentTransaction txn, LedgerAccount account, String type, BigDecimal amount) {
@@ -62,6 +84,18 @@ public class LedgerPostingService {
         return accounts.lockByCode(code)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
                         "Ledger account missing: " + code));
+    }
+
+    private LedgerAccount lockOrCreate(String code, String name, String type) {
+        return accounts.lockByCode(code).orElseGet(() -> {
+            LedgerAccount account = new LedgerAccount();
+            account.setCode(code);
+            account.setName(name);
+            account.setType(type);
+            account.setBalance(BigDecimal.ZERO);
+            accounts.saveAndFlush(account);
+            return accounts.lockByCode(code).orElse(account);
+        });
     }
 
     private String clearingAccount(PaymentMode mode) {

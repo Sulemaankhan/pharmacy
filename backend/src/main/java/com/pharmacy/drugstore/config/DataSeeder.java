@@ -97,6 +97,7 @@ public class DataSeeder {
         seedAccount(ledgerAccounts, "WALLET_CLEARING", "Wallet clearing", "ASSET");
         seedAccount(ledgerAccounts, "COD_RECEIVABLE", "Cash on delivery receivable", "ASSET");
         seedAccount(ledgerAccounts, "MERCHANT_SALES", "Medicine Drugstore sales", "REVENUE");
+        seedAccount(ledgerAccounts, "PHARMACY_WALLET", "Pharmacy account", "ASSET");
     }
 
     private void seedAccount(com.pharmacy.drugstore.repository.LedgerAccountRepository repo, String code, String name, String type) {

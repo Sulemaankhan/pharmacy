@@ -66,6 +66,7 @@ public class ShipmentPublisher {
                 shipment.getEmail(),
                 shipment.getCarrier(),
                 shipment.getEstimatedDelivery(),
-                shipment.getCreatedAt());
+                shipment.getCreatedAt(),
+                java.util.UUID.randomUUID().toString());
     }
 }
