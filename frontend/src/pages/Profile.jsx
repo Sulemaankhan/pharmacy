@@ -146,10 +146,6 @@ export default function Profile() {
           <p className="status-pill ok" style={{ marginTop: 10 }}>{user.role || 'USER'}</p>
           <p className="muted" style={{ marginTop: 12 }}>Member since {formatWhen(user.createdAt || live.createdAt)}</p>
           <div className="profile-stats">
-            <div className="profile-stat">
-              <b>{account?.availableBalance == null ? '—' : formatMoney(account.availableBalance)}</b>
-              <span>Available balance</span>
-            </div>
             <Link to="/orders" className="profile-stat">
               <b>{orders}</b>
               <span>Orders</span>
@@ -206,7 +202,7 @@ export default function Profile() {
 
       <div id="account" className="panel wide" style={{ marginTop: 18 }}>
         <h3>Your account</h3>
-        <p className="muted">Live balance after each purchase. New accounts start with ₹10,000. Purchases debit this wallet and credit the pharmacy account.</p>
+        <p className="muted">Purchases debit this wallet and credit the pharmacy account.</p>
         <TxnTable rows={account?.transactions} />
       </div>
 
@@ -216,13 +212,13 @@ export default function Profile() {
           Sales wallet {pharmacy?.email ? `· ${pharmacy.email}` : ''}.
           Balance {pharmacy?.availableBalance == null ? '—' : formatMoney(pharmacy.availableBalance)}.
         </p>
-        <TxnTable rows={pharmacy?.transactions} empty="No pharmacy credits yet. Complete a purchase to credit this account." />
+        <TxnTable rows={pharmacy?.transactions} showRunningBalance empty="No pharmacy credits yet. Complete a purchase to credit this account." />
       </div>
     </div>
   )
 }
 
-function TxnTable({ rows, empty = 'No account transactions yet.' }) {
+function TxnTable({ rows, showRunningBalance = false, empty = 'No account transactions yet.' }) {
   if (!rows || rows.length === 0) {
     return <p className="muted" style={{ marginTop: 10 }}>{empty}</p>
   }
@@ -236,7 +232,9 @@ function TxnTable({ rows, empty = 'No account transactions yet.' }) {
           </span>
           <b className={txn.type === 'DEBIT' ? 'error' : ''}>
             {txn.type === 'DEBIT' ? '-' : '+'}{formatMoney(txn.amount)}
-            <div className="muted">Bal {formatMoney(txn.balanceAfter)}</div>
+            {showRunningBalance && txn.balanceAfter != null && (
+              <div className="muted">Bal {formatMoney(txn.balanceAfter)}</div>
+            )}
           </b>
         </div>
       ))}

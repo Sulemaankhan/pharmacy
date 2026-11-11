@@ -170,9 +170,6 @@ export default function OrderDetail() {
           {payment.debitedAmount != null && (
             <div className="summary-row"><span>Debited</span><span>{formatMoney(payment.debitedAmount)}</span></div>
           )}
-          {payment.availableBalance != null && (
-            <div className="summary-row"><span>Your balance after debit</span><span>{formatMoney(payment.availableBalance)}</span></div>
-          )}
           {payment.creditedAmount != null && (
             <div className="summary-row"><span>Credited to pharmacy</span><span>{formatMoney(payment.creditedAmount)}</span></div>
           )}

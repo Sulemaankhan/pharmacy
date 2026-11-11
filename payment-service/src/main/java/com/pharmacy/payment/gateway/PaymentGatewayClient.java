@@ -13,7 +13,7 @@ public class PaymentGatewayClient {
     private static final Logger log = LoggerFactory.getLogger(PaymentGatewayClient.class);
     private final RestClient rest;
 
-    public PaymentGatewayClient(@Value("${app.payment-gateway.base-url:http://localhost:8086}") String baseUrl) {
+    public PaymentGatewayClient(@Value("${app.gateway-service.base-url:http://localhost:8086}") String baseUrl) {
         this.rest = RestClient.builder().baseUrl(baseUrl).build();
     }
 

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import { formatMoney } from '../money'
 import { api } from '../api'
-import { fetchAccount, fetchPharmacyAccount } from '../account'
+import { fetchPharmacyAccount } from '../account'
 
 export default function OrderSuccess() {
   const { orderNumber } = useParams()
@@ -11,7 +11,6 @@ export default function OrderSuccess() {
   const [error, setError] = useState('')
   const [emailing, setEmailing] = useState(false)
   const [emailMsg, setEmailMsg] = useState('')
-  const [account, setAccount] = useState(null)
   const [pharmacy, setPharmacy] = useState(null)
 
   useEffect(() => {
@@ -24,7 +23,6 @@ export default function OrderSuccess() {
         message: prev?.message,
       })))
       .catch((e) => setError(e.message))
-    fetchAccount().then(setAccount).catch(() => {})
     fetchPharmacyAccount().then(setPharmacy).catch(() => {})
   }, [orderNumber])
 
@@ -45,7 +43,6 @@ export default function OrderSuccess() {
   const payment = order?.payment
   const success = order?.success !== false && (order?.status ? order.status === 'SUCCESS' : true)
   const debited = order?.debitedAmount ?? payment?.debitedAmount
-  const available = account?.availableBalance ?? order?.availableBalance ?? payment?.availableBalance
   const credited = order?.creditedAmount ?? payment?.creditedAmount
   const pharmacyBalance = pharmacy?.availableBalance ?? order?.pharmacyBalance ?? payment?.pharmacyBalance
 
@@ -87,9 +84,6 @@ export default function OrderSuccess() {
           {(order?.amount != null || payment?.amount != null) && <div className="summary-row"><span>Amount</span><b>{formatMoney(order.amount ?? payment.amount)}</b></div>}
           {debited != null && (
             <div className="summary-row"><span>Debited</span><b>{formatMoney(debited)}</b></div>
-          )}
-          {available != null && (
-            <div className="summary-row"><span>Your balance</span><b>{formatMoney(available)}</b></div>
           )}
           {credited != null && (
             <div className="summary-row"><span>Credited to pharmacy</span><b>{formatMoney(credited)}</b></div>

@@ -24,8 +24,7 @@ public record DebitResponse(
     public static DebitResponse insufficient(BigDecimal available, BigDecimal required) {
         return new DebitResponse(
                 false,
-                "Insufficient balance. Available ₹" + available.toPlainString()
-                        + ", required ₹" + required.toPlainString(),
+                "Insufficient balance for this order.",
                 null,
                 BigDecimal.ZERO,
                 available,

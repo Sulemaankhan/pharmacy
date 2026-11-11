@@ -73,7 +73,6 @@ public class PaymentCommandListener {
                     true,
                     ref,
                     outcome.message() + " Debited ₹" + amount(debit.debitedAmount())
-                            + ". Available balance ₹" + amount(debit.availableBalance())
                             + ". Credited pharmacy ₹" + amount(debit.creditedAmount())
                             + ". Pharmacy balance ₹" + amount(debit.pharmacyBalance()) + ".",
                     outcome.maskedInstrument(),
@@ -107,8 +106,7 @@ public class PaymentCommandListener {
                     true,
                     refund.gatewayRef(),
                     "Refunded ₹" + amount(refund.creditedAmount())
-                            + " to customer. Available balance ₹" + amount(refund.availableBalance())
-                            + ". Pharmacy balance ₹" + amount(refund.pharmacyBalance()) + ".",
+                            + " to customer. Pharmacy balance ₹" + amount(refund.pharmacyBalance()) + ".",
                     null,
                     BigDecimal.ZERO,
                     refund.availableBalance(),

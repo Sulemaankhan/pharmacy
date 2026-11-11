@@ -15,7 +15,7 @@ public class PaymentGatewayClient {
     private static final Logger log = LoggerFactory.getLogger(PaymentGatewayClient.class);
     private final RestClient rest;
 
-    public PaymentGatewayClient(@Value("${app.payment-gateway.base-url:http://localhost:8086}") String baseUrl) {
+    public PaymentGatewayClient(@Value("${app.gateway-service.base-url:http://localhost:8086}") String baseUrl) {
         this.rest = RestClient.builder().baseUrl(baseUrl).build();
     }
 
@@ -43,7 +43,7 @@ public class PaymentGatewayClient {
         } catch (RestClientException ex) {
             log.error("Payment gateway account lookup failed email={}", email, ex);
             throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
-                    "Payment gateway is unavailable. Start payment-gateway on port 8086.");
+                    "Gateway service is unavailable. Start gateway-service on port 8086.");
         }
     }
 
@@ -62,7 +62,7 @@ public class PaymentGatewayClient {
         } catch (RestClientException ex) {
             log.error("Payment gateway pharmacy account lookup failed", ex);
             throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
-                    "Payment gateway is unavailable. Start payment-gateway on port 8086.");
+                    "Gateway service is unavailable. Start gateway-service on port 8086.");
         }
     }
 }

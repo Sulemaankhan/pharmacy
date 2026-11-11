@@ -8,7 +8,7 @@ Medicine Drugstore is split into seven backend apps plus the React storefront.
 | Customer service | `customer-service` | 8087 | Register, login, profile, password reset | Sync HTTP |
 | Inventory service | `inventory-service` | 8088 | Catalog HTTP; stock reserve/release | HTTP + Kafka request-reply |
 | Payment Kafka service | `payment-service` | 8083 | Validates UPI/card/wallet/COD then charges the gateway | Kafka request-reply |
-| Payment gateway | `payment-gateway` | 8086 | Customer accounts, debit transactions, live balance | HTTP + WebSocket |
+| Gateway service | `gateway-service` | 8086 | Customer accounts, debit transactions, live balance | HTTP + WebSocket |
 | Notification Kafka service | `notification-service` | 8084 | Sends order and password-reset emails | Kafka fire-and-forget |
 | Shipment Kafka service | `shipment-service` | 8085 | Advances delivery and pushes live tracking | Kafka request-reply + WebSocket |
 | Pharmacy UI | `frontend` | 5173 | Vite + React UI | HTTP to pharmacy-service 8082 |
@@ -29,9 +29,9 @@ Checkout is a **saga orchestrator** in pharmacy-service: Kafka-reserve stock →
 Login and profile stay **synchronous HTTP** (the UI needs the JWT immediately). Catalog listing is **synchronous HTTP**. Stock mutation is **Kafka request-reply** so the saga can wait and compensate.
 
 Live tracking uses **WebSocket** from the browser to `shipment-service` (`/ws/shipments`).
-Live wallet balance uses **WebSocket** from the browser to `payment-gateway` (`/ws/accounts`).
+Live wallet balance uses **WebSocket** from the browser to `gateway-service` (`/ws/accounts`).
 
-Customer money lives in MySQL tables `customer_accounts` and `account_transactions` (owned by payment-gateway). New wallets open with ₹10,000. Checkout **debits the logged-in customer** and **credits the pharmacy account** (`pharmacy@pharmacy.com`) in the same transaction. Insufficient funds fail the payment without charging.
+Customer money lives in MySQL tables `customer_accounts` and `account_transactions` (owned by gateway-service). New wallets open with ₹10,000. Checkout **debits the logged-in customer** and **credits the pharmacy account** (`pharmacy@pharmacy.com`) in the same transaction. Insufficient funds fail the payment without charging.
 
 ## Run locally
 
@@ -50,12 +50,12 @@ cd customer-service && mvn spring-boot:run
 cd inventory-service && mvn spring-boot:run
 cd backend && mvn spring-boot:run
 cd payment-service && mvn spring-boot:run
-cd payment-gateway && mvn spring-boot:run
+cd gateway-service && mvn spring-boot:run
 cd notification-service && mvn spring-boot:run
 cd shipment-service && mvn spring-boot:run
 ```
 
-Start `customer-service`, `inventory-service`, and `payment-gateway` before using the storefront. Profile → Account shows available balance and every CREDIT/DEBIT row.
+Start `customer-service`, `inventory-service`, and `gateway-service` before using the storefront. Profile → Account shows available balance and every CREDIT/DEBIT row.
 
 4. Start the storefront:
 
