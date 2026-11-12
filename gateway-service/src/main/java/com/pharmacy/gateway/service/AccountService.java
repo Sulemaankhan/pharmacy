@@ -77,7 +77,7 @@ public class AccountService {
                     request.transactionRef(), "DEBIT", account);
             if (existing.isPresent()) {
                 CustomerAccount pharmacy = creditPharmacy(request, existing.get().getAmount());
-                log.info("Account debit idempotent txn={} balance={}", request.transactionRef(), account.getAvailableBalance());
+                log.info("Account debit idempotent txn={}", request.transactionRef());
                 return DebitResponse.ok(
                         request.transactionRef(),
                         existing.get().getAmount(),
@@ -88,7 +88,7 @@ public class AccountService {
         }
         BigDecimal available = account.getAvailableBalance() == null ? BigDecimal.ZERO : account.getAvailableBalance();
         if (available.compareTo(amount) < 0) {
-            log.warn("Insufficient balance email={} available={} required={}", account.getEmail(), available, amount);
+            log.warn("Insufficient balance email={} required={}", account.getEmail(), amount);
             return DebitResponse.insufficient(available, amount);
         }
 
@@ -113,8 +113,8 @@ public class AccountService {
         String gatewayRef = "GW-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
         hub.broadcast(toSnapshot(account, true));
         hub.broadcast(toSnapshot(pharmacy, true));
-        log.info("Account transferred email={} amount={} remaining={} pharmacy={} order={}",
-                account.getEmail(), amount, remaining, pharmacy.getAvailableBalance(), request.orderNumber());
+        log.info("Account transferred email={} amount={} order={}",
+                account.getEmail(), amount, request.orderNumber());
         return DebitResponse.ok(gatewayRef, amount, remaining, amount, pharmacy.getAvailableBalance());
     }
 
@@ -134,8 +134,7 @@ public class AccountService {
             if (existing.isPresent() && existing.get().getDescription() != null
                     && existing.get().getDescription().toLowerCase(Locale.ROOT).contains("refund")) {
                 CustomerAccount pharmacy = requirePharmacy();
-                log.info("Account refund idempotent txn={} balance={}",
-                        request.transactionRef(), customer.getAvailableBalance());
+                log.info("Account refund idempotent txn={}", request.transactionRef());
                 return DebitResponse.refunded(
                         request.transactionRef(),
                         existing.get().getAmount(),
@@ -155,8 +154,8 @@ public class AccountService {
         hub.broadcast(toSnapshot(customer, true));
         hub.broadcast(toSnapshot(pharmacy, true));
         String gatewayRef = "RF-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
-        log.info("Account refunded email={} amount={} balance={} pharmacy={} order={}",
-                customer.getEmail(), amount, next, pharmacy.getAvailableBalance(), request.orderNumber());
+        log.info("Account refunded email={} amount={} order={}",
+                customer.getEmail(), amount, request.orderNumber());
         return DebitResponse.refunded(gatewayRef, amount, next, pharmacy.getAvailableBalance());
     }
 
@@ -172,8 +171,8 @@ public class AccountService {
         BigDecimal current = pharmacy.getAvailableBalance() == null ? BigDecimal.ZERO : pharmacy.getAvailableBalance();
         BigDecimal remaining = current.subtract(amount);
         if (remaining.signum() < 0) {
-            log.warn("Pharmacy refund debit clamped email={} available={} required={}",
-                    pharmacy.getEmail(), current, amount);
+            log.warn("Pharmacy refund debit clamped email={} required={}",
+                    pharmacy.getEmail(), amount);
             remaining = BigDecimal.ZERO;
         }
         pharmacy.setAvailableBalance(remaining);
@@ -200,7 +199,7 @@ public class AccountService {
         accounts.saveAndFlush(pharmacy);
         post(pharmacy, "CREDIT", amount, next, request,
                 "Sale " + safe(request.orderNumber()) + " · from " + safe(request.email()));
-        log.info("Pharmacy credited amount={} balance={} order={}", amount, next, request.orderNumber());
+        log.info("Pharmacy credited amount={} order={}", amount, request.orderNumber());
         return pharmacy;
     }
 
@@ -276,7 +275,7 @@ public class AccountService {
             openingTxn.setDescription(description);
             transactions.save(openingTxn);
         }
-        log.info("Opened {} account email={} balance={}", type, account.getEmail(), opening);
+        log.info("Opened {} account email={}", type, account.getEmail());
         hub.broadcast(toSnapshot(account, true));
         return account;
     }

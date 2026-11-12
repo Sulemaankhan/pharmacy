@@ -58,14 +58,12 @@ public class PaymentCommandListener {
             if (debit == null || !debit.success()) {
                 String message = debit == null ? "Payment gateway declined the charge" : debit.message();
                 log.warn("Account debit rejected orderNumber={} message={}", command.orderNumber(), message);
-                return PaymentResult.fail(command, message, outcome.maskedInstrument(),
-                        debit == null ? null : debit.availableBalance());
+                return PaymentResult.fail(command, message, outcome.maskedInstrument(), null);
             }
 
             String ref = debit.gatewayRef() != null ? debit.gatewayRef() : outcome.gatewayRef();
-            log.info("Payment captured orderNumber={} debited={} remaining={} pharmacyCredited={} pharmacyBalance={}",
-                    command.orderNumber(), debit.debitedAmount(), debit.availableBalance(),
-                    debit.creditedAmount(), debit.pharmacyBalance());
+            log.info("Payment captured orderNumber={} debited={} pharmacyCredited={}",
+                    command.orderNumber(), debit.debitedAmount(), debit.creditedAmount());
             return new PaymentResult(
                     command.correlationId(),
                     command.orderNumber(),
@@ -73,13 +71,12 @@ public class PaymentCommandListener {
                     true,
                     ref,
                     outcome.message() + " Debited ₹" + amount(debit.debitedAmount())
-                            + ". Credited pharmacy ₹" + amount(debit.creditedAmount())
-                            + ". Pharmacy balance ₹" + amount(debit.pharmacyBalance()) + ".",
+                            + ". Credited pharmacy ₹" + amount(debit.creditedAmount()) + ".",
                     outcome.maskedInstrument(),
                     debit.debitedAmount(),
-                    debit.availableBalance(),
+                    null,
                     debit.creditedAmount(),
-                    debit.pharmacyBalance());
+                    null);
         } catch (Exception ex) {
             log.warn("Payment processing failed orderNumber={} reason={}", command.orderNumber(), ex.getMessage());
             return PaymentResult.fail(command, ex.getMessage() == null ? "Payment could not be processed" : ex.getMessage());
@@ -94,24 +91,22 @@ public class PaymentCommandListener {
             if (refund == null || !refund.success()) {
                 String message = refund == null ? "Payment gateway declined the refund" : refund.message();
                 log.warn("Account refund rejected orderNumber={} message={}", command.orderNumber(), message);
-                return PaymentResult.fail(command, message, null,
-                        refund == null ? null : refund.availableBalance());
+                return PaymentResult.fail(command, message, null, null);
             }
-            log.info("Payment refunded orderNumber={} credited={} remaining={} pharmacyBalance={}",
-                    command.orderNumber(), refund.creditedAmount(), refund.availableBalance(), refund.pharmacyBalance());
+            log.info("Payment refunded orderNumber={} credited={}",
+                    command.orderNumber(), refund.creditedAmount());
             return new PaymentResult(
                     command.correlationId(),
                     command.orderNumber(),
                     command.transactionRef(),
                     true,
                     refund.gatewayRef(),
-                    "Refunded ₹" + amount(refund.creditedAmount())
-                            + " to customer. Pharmacy balance ₹" + amount(refund.pharmacyBalance()) + ".",
+                    "Refunded ₹" + amount(refund.creditedAmount()) + " to customer.",
                     null,
                     BigDecimal.ZERO,
-                    refund.availableBalance(),
+                    null,
                     refund.creditedAmount(),
-                    refund.pharmacyBalance());
+                    null);
         } catch (Exception ex) {
             log.warn("Payment refund failed orderNumber={} reason={}", command.orderNumber(), ex.getMessage());
             return PaymentResult.fail(command, ex.getMessage() == null ? "Refund could not be processed" : ex.getMessage());

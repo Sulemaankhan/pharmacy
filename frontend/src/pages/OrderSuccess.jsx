@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import { formatMoney } from '../money'
 import { api } from '../api'
-import { fetchPharmacyAccount } from '../account'
 
 export default function OrderSuccess() {
   const { orderNumber } = useParams()
@@ -11,7 +10,6 @@ export default function OrderSuccess() {
   const [error, setError] = useState('')
   const [emailing, setEmailing] = useState(false)
   const [emailMsg, setEmailMsg] = useState('')
-  const [pharmacy, setPharmacy] = useState(null)
 
   useEffect(() => {
     api(`/api/orders/${orderNumber}`)
@@ -23,7 +21,6 @@ export default function OrderSuccess() {
         message: prev?.message,
       })))
       .catch((e) => setError(e.message))
-    fetchPharmacyAccount().then(setPharmacy).catch(() => {})
   }, [orderNumber])
 
   async function emailOrder() {
@@ -44,7 +41,6 @@ export default function OrderSuccess() {
   const success = order?.success !== false && (order?.status ? order.status === 'SUCCESS' : true)
   const debited = order?.debitedAmount ?? payment?.debitedAmount
   const credited = order?.creditedAmount ?? payment?.creditedAmount
-  const pharmacyBalance = pharmacy?.availableBalance ?? order?.pharmacyBalance ?? payment?.pharmacyBalance
 
   return (
     <div className="container page">
@@ -87,9 +83,6 @@ export default function OrderSuccess() {
           )}
           {credited != null && (
             <div className="summary-row"><span>Credited to pharmacy</span><b>{formatMoney(credited)}</b></div>
-          )}
-          {pharmacyBalance != null && (
-            <div className="summary-row"><span>Pharmacy balance</span><b>{formatMoney(pharmacyBalance)}</b></div>
           )}
           {(order?.refunded || payment?.refunded) && (
             <div className="summary-row"><span>Refund</span><b>{formatMoney(order?.refundedAmount ?? payment?.refundedAmount ?? debited ?? order?.amount ?? payment?.amount)}</b></div>

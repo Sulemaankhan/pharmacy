@@ -168,8 +168,6 @@ public class CheckoutService {
             txn.setRefunded(true);
             txn.setRefundedAmount(refund == null ? txn.getAmount() : refund.creditedAmount());
             if (refund != null) {
-                txn.setAvailableBalance(refund.availableBalance());
-                txn.setPharmacyBalance(refund.pharmacyBalance());
                 txn.setGatewayMessage(refund.message());
             }
             transactions.saveAndFlush(txn);
@@ -321,9 +319,7 @@ public class CheckoutService {
         txn.setGatewayMessage(result.message());
         txn.setMaskedInstrument(result.maskedInstrument());
         txn.setDebitedAmount(result.debitedAmount());
-        txn.setAvailableBalance(result.availableBalance());
         txn.setCreditedAmount(result.creditedAmount());
-        txn.setPharmacyBalance(result.pharmacyBalance());
         txn.setCompletedAt(Instant.now());
     }
 
@@ -403,9 +399,9 @@ public class CheckoutService {
                 shipment == null ? null : shipment.getContactNumber(),
                 shipment == null ? null : shipment.getEmail(),
                 result == null ? null : result.debitedAmount(),
-                result == null ? null : result.availableBalance(),
+                null,
                 result == null ? null : result.creditedAmount(),
-                result == null ? null : result.pharmacyBalance());
+                null);
     }
 
     public record CompletedCheckout(CustomerOrder order, PaymentTransaction txn, String message) {}

@@ -15,9 +15,9 @@ public class AccountSeeder {
     CommandLineRunner seedDemoAccount(AccountService accounts) {
         return args -> {
             var pharmacy = accounts.pharmacySnapshot();
-            log.info("Pharmacy account ready email={} balance={}", pharmacy.email(), pharmacy.availableBalance());
+            log.info("Pharmacy account ready email={}", pharmacy.email());
             var snapshot = accounts.snapshot("demo@pharmacy.com", null, "Demo User");
-            log.info("Demo account ready email={} balance={}", snapshot.email(), snapshot.availableBalance());
+            log.info("Demo account ready email={}", snapshot.email());
         };
     }
 }
