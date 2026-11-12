@@ -1,22 +1,25 @@
 package com.pharmacy.shipment.service;
 
 import com.pharmacy.shipment.entity.Shipment;
+import com.pharmacy.shipment.event.DomainEvent;
 import com.pharmacy.shipment.event.ShipmentCommand;
 import com.pharmacy.shipment.event.ShipmentUpdate;
 import com.pharmacy.shipment.mapper.ShipmentMapper;
 import com.pharmacy.shipment.realtime.ShipmentHub;
+import com.pharmacy.shipment.reliability.OutboxService;
 import com.pharmacy.shipment.repository.ShipmentRepository;
 import com.pharmacy.shipment.shipment.ShipmentStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.pharmacy.shipment.event.ShipmentResult;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Set;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -34,20 +37,23 @@ public class ShipmentTrackingService {
 
     private final ShipmentRepository shipments;
     private final ShipmentHub hub;
-    private final KafkaTemplate<String, Object> kafka;
+    private final OutboxService outbox;
     private final String updatesTopic;
+    private final String eventsTopic;
     private final Set<String> unserviceablePincodes;
 
     public ShipmentTrackingService(
             ShipmentRepository shipments,
             ShipmentHub hub,
-            KafkaTemplate<String, Object> kafka,
+            OutboxService outbox,
             @Value("${app.kafka.topics.shipment-updates}") String updatesTopic,
+            @Value("${app.kafka.topics.shipment-events}") String eventsTopic,
             @Value("${app.shipment.unserviceable-pincodes:999999,000000}") String unserviceablePincodes) {
         this.shipments = shipments;
         this.hub = hub;
-        this.kafka = kafka;
+        this.outbox = outbox;
         this.updatesTopic = updatesTopic;
+        this.eventsTopic = eventsTopic;
         this.unserviceablePincodes = Arrays.stream(unserviceablePincodes.split(","))
                 .map(String::trim)
                 .filter(code -> !code.isBlank())
@@ -62,6 +68,7 @@ public class ShipmentTrackingService {
         String type = command.type().trim().toUpperCase();
         return switch (type) {
             case "CREATE", "RESERVE" -> applyReserve(command);
+            case "PACKAGE_READY", "FULFIL" -> applyPackageReady(command);
             case "CANCEL" -> applyCancel(command);
             case "PAYMENT_RESULT" -> applyPayment(command);
             default -> ShipmentResult.fail(command, "Unsupported shipment command " + type);
@@ -77,6 +84,33 @@ public class ShipmentTrackingService {
                 ShipmentStatus.SHIPPED,
                 ShipmentStatus.OUT_FOR_DELIVERY));
         active.forEach(this::advance);
+    }
+
+    private ShipmentResult applyPackageReady(ShipmentCommand command) {
+        ShipmentResult reserved = applyReserve(command);
+        if (!reserved.success()) {
+            publishFailed(command, reserved.message());
+            return reserved;
+        }
+        return applyPayment(new ShipmentCommand(
+                command.type(),
+                command.userId(),
+                command.customerEmail(),
+                command.orderId(),
+                command.orderNumber(),
+                command.trackingNumber(),
+                true,
+                command.recipientName(),
+                command.address(),
+                command.city(),
+                command.state(),
+                command.pincode(),
+                command.contactNumber(),
+                command.email(),
+                command.carrier(),
+                command.estimatedDelivery(),
+                command.createdAt(),
+                command.correlationId()));
     }
 
     private ShipmentResult applyReserve(ShipmentCommand command) {
@@ -260,11 +294,43 @@ public class ShipmentTrackingService {
     private void publish(Shipment shipment) {
         ShipmentUpdate update = ShipmentMapper.toUpdate(shipment);
         hub.broadcast(update);
-        try {
-            kafka.send(updatesTopic, shipment.getTrackingNumber(), update);
-        } catch (Exception ex) {
-            log.warn("Shipment kafka update failed tracking={}", shipment.getTrackingNumber(), ex);
+        String key = shipment.getOrderNumber() == null ? shipment.getTrackingNumber() : shipment.getOrderNumber();
+        outbox.enqueue(updatesTopic, key, "SHIPMENT_UPDATE", update);
+        String eventType = eventType(shipment.getStatus());
+        if (eventType != null) {
+            Map<String, Object> payload = new LinkedHashMap<>();
+            payload.put("success", true);
+            payload.put("status", shipment.getStatus().name());
+            payload.put("trackingNumber", shipment.getTrackingNumber());
+            payload.put("message", eventType.replace('_', ' '));
+            outbox.enqueue(eventsTopic, key, DomainEvent.of(
+                    eventType, shipment.getOrderNumber(), shipment.getTrackingNumber(), payload));
         }
+    }
+
+    private void publishFailed(ShipmentCommand command, String message) {
+        if (command == null || command.orderNumber() == null) {
+            return;
+        }
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("success", false);
+        payload.put("message", message);
+        payload.put("trackingNumber", command.trackingNumber());
+        outbox.enqueue(eventsTopic, command.orderNumber(),
+                DomainEvent.of("SHIPMENT_FAILED", command.orderNumber(), command.correlationId(), payload));
+    }
+
+    private static String eventType(ShipmentStatus status) {
+        if (status == null) {
+            return null;
+        }
+        return switch (status) {
+            case CONFIRMED -> "SHIPMENT_CREATED";
+            case SHIPPED -> "SHIPMENT_PICKED_UP";
+            case DELIVERED -> "SHIPMENT_DELIVERED";
+            case CANCELLED -> "SHIPMENT_CANCELLED";
+            default -> null;
+        };
     }
 
     private static boolean notBlank(String value) {

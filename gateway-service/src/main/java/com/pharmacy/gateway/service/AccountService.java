@@ -59,6 +59,27 @@ public class AccountService {
         return toSnapshot(requirePharmacy(), true);
     }
 
+    @Transactional(readOnly = true)
+    public DebitResponse lookup(String transactionRef) {
+        if (transactionRef == null || transactionRef.isBlank()) {
+            return DebitResponse.failed("Transaction ref is required", BigDecimal.ZERO);
+        }
+        var debit = transactions.findFirstByTransactionRefAndTypeOrderByCreatedAtAsc(transactionRef, "DEBIT");
+        if (debit.isEmpty()) {
+            return DebitResponse.failed("No debit found for " + transactionRef, BigDecimal.ZERO);
+        }
+        AccountTransaction row = debit.get();
+        CustomerAccount account = row.getAccount();
+        CustomerAccount pharmacy = accounts.findByEmailIgnoreCase(pharmacyEmail).orElse(null);
+        log.info("Account lookup txn={} amount={}", transactionRef, row.getAmount());
+        return DebitResponse.ok(
+                transactionRef,
+                row.getAmount(),
+                account == null ? BigDecimal.ZERO : account.getAvailableBalance(),
+                row.getAmount(),
+                pharmacy == null ? BigDecimal.ZERO : pharmacy.getAvailableBalance());
+    }
+
     @Transactional
     public DebitResponse debit(DebitRequest request) {
         if (request == null || request.email() == null || request.email().isBlank()) {
@@ -123,10 +144,6 @@ public class AccountService {
         if (request == null || request.email() == null || request.email().isBlank()) {
             return DebitResponse.failed("Customer email is required", BigDecimal.ZERO);
         }
-        BigDecimal amount = request.amount();
-        if (amount == null || amount.signum() <= 0) {
-            return DebitResponse.failed("Refund amount must be greater than zero", BigDecimal.ZERO);
-        }
         CustomerAccount customer = lockOrOpen(request.email(), request.userId(), request.customerName());
         if (request.transactionRef() != null && !request.transactionRef().isBlank()) {
             var existing = transactions.findByTransactionRefAndTypeAndAccount(
@@ -143,12 +160,25 @@ public class AccountService {
             }
         }
 
+        AccountTransaction debit = findCustomerDebit(request.transactionRef());
+        if (debit == null) {
+            log.info("Account refund skipped, no customer debit txn={} order={}",
+                    request.transactionRef(), request.orderNumber());
+            return DebitResponse.nothingToRefund(
+                    customer.getAvailableBalance() == null ? BigDecimal.ZERO : customer.getAvailableBalance());
+        }
+        BigDecimal amount = debit.getAmount();
+        if (amount == null || amount.signum() <= 0) {
+            return DebitResponse.nothingToRefund(
+                    customer.getAvailableBalance() == null ? BigDecimal.ZERO : customer.getAvailableBalance());
+        }
+
         BigDecimal next = (customer.getAvailableBalance() == null ? BigDecimal.ZERO : customer.getAvailableBalance()).add(amount);
         customer.setAvailableBalance(next);
         customer.setUpdatedAt(Instant.now());
         accounts.saveAndFlush(customer);
         post(customer, "CREDIT", amount, next, request,
-                "Refund " + safe(request.orderNumber()) + " · shipment unavailable");
+                "Refund " + safe(request.orderNumber()) + " · order cancelled");
 
         CustomerAccount pharmacy = debitPharmacy(request, amount);
         hub.broadcast(toSnapshot(customer, true));
@@ -157,6 +187,19 @@ public class AccountService {
         log.info("Account refunded email={} amount={} order={}",
                 customer.getEmail(), amount, request.orderNumber());
         return DebitResponse.refunded(gatewayRef, amount, next, pharmacy.getAvailableBalance());
+    }
+
+    private AccountTransaction findCustomerDebit(String transactionRef) {
+        if (transactionRef == null || transactionRef.isBlank()) {
+            return null;
+        }
+        return transactions.findFirstByTransactionRefAndTypeOrderByCreatedAtAsc(transactionRef, "DEBIT")
+                .filter(row -> row.getAccount() != null && !isPharmacy(row.getAccount()))
+                .orElse(null);
+    }
+
+    private boolean isPharmacy(CustomerAccount account) {
+        return account != null && pharmacyEmail.equals(normalize(account.getEmail()));
     }
 
     private CustomerAccount debitPharmacy(DebitRequest request, BigDecimal amount) {

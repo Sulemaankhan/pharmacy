@@ -6,6 +6,7 @@ import com.pharmacy.gateway.dto.DebitResponse;
 import com.pharmacy.gateway.service.AccountService;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -36,6 +37,11 @@ public class AccountController {
     @GetMapping("/pharmacy")
     public AccountSnapshot pharmacy() {
         return accounts.pharmacySnapshot();
+    }
+
+    @GetMapping("/transactions/{transactionRef}")
+    public DebitResponse lookup(@PathVariable String transactionRef) {
+        return accounts.lookup(transactionRef);
     }
 
     @PostMapping("/debit")

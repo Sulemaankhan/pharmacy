@@ -22,9 +22,9 @@ final class EmailBodies {
 
     static String paymentFailure(NotificationCommand cmd) {
         String reason = cmd.gatewayMessage() == null || cmd.gatewayMessage().isBlank()
-                ? "Payment was not completed" : cmd.gatewayMessage();
+                ? "The order was cancelled." : cmd.gatewayMessage();
         return "Hello " + dash(cmd.customerName()) + ",\n\n"
-                + "We could not complete payment for your Medicine Drugstore order.\n\n"
+                + "Your Medicine Drugstore order could not be completed and was cancelled.\n\n"
                 + "Order: " + dash(cmd.orderNumber()) + "\n"
                 + "Total: Rs." + money(cmd.total()) + "\n"
                 + "Payment mode: " + dash(cmd.paymentMode()) + "\n"
@@ -32,7 +32,7 @@ final class EmailBodies {
                 + "Reason: " + reason + "\n\n"
                 + "Items\n" + items(cmd.items())
                 + "\nDelivery\n" + delivery(cmd) + "\n\n"
-                + "Your cart is still saved. Please try another payment mode.\n\n"
+                + "If a payment was taken, it has been refunded to your account.\n\n"
                 + "Medicine Drugstore\n";
     }
 
@@ -51,6 +51,27 @@ final class EmailBodies {
                 + "Transaction: " + dash(cmd.transactionRef()) + "\n\n"
                 + "Delivery\n" + deliveryWithStatus(cmd) + "\n"
                 + "This copy was sent to your account email: " + dash(cmd.customerEmail()) + "\n\n"
+                + "Thank you for shopping at Medicine Drugstore.\n";
+    }
+
+    static String shipmentPickedUp(NotificationCommand cmd) {
+        return "Hello " + dash(cmd.customerName()) + ",\n\n"
+                + "Your Medicine Drugstore order has been picked up and is on the way.\n\n"
+                + "Order: " + dash(cmd.orderNumber()) + "\n"
+                + "Tracking ID: " + dash(cmd.trackingNumber()) + "\n"
+                + "Status: " + dash(cmd.shipmentStatus()) + "\n\n"
+                + "Delivery\n" + delivery(cmd) + "\n\n"
+                + "We will email you again when it is delivered.\n\n"
+                + "Medicine Drugstore\n";
+    }
+
+    static String orderDelivered(NotificationCommand cmd) {
+        return "Hello " + dash(cmd.customerName()) + ",\n\n"
+                + "Your Medicine Drugstore order has been delivered.\n\n"
+                + "Order: " + dash(cmd.orderNumber()) + "\n"
+                + "Tracking ID: " + dash(cmd.trackingNumber()) + "\n"
+                + "Status: DELIVERED\n\n"
+                + "Delivery\n" + delivery(cmd) + "\n\n"
                 + "Thank you for shopping at Medicine Drugstore.\n";
     }
 

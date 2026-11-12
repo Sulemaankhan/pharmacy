@@ -126,7 +126,7 @@ export default function Checkout() {
           message: result.message,
           status: result.status,
         })
-        setError(result.message || 'Payment failed')
+        setError(result.message || 'Your order was cancelled. A failure notification was emailed to your account.')
       }
     } catch (err) {
       clientLog('error', 'checkout.error', { error: err.message, paymentMode: mode })

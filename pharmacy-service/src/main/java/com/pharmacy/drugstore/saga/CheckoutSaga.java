@@ -36,14 +36,26 @@ public class CheckoutSaga {
 
     private boolean stockReserved;
     private boolean paymentCaptured;
+    private boolean pharmacyReady;
     private boolean shipmentReserved;
+    private boolean delivered;
     private boolean compensated;
+
+    @Column(columnDefinition = "TEXT")
+    private String paymentCommandJson;
+
+    @Column(columnDefinition = "TEXT")
+    private String shipmentCommandJson;
+
+    @Column(length = 64)
+    private String lastEventId;
 
     @Column(length = 500)
     private String failureReason;
 
     private Instant createdAt = Instant.now();
     private Instant updatedAt = Instant.now();
+    private Instant stepStartedAt = Instant.now();
 
     public Long getId() { return id; }
     public String getOrderNumber() { return orderNumber; }
@@ -68,13 +80,25 @@ public class CheckoutSaga {
     public void setStockReserved(boolean stockReserved) { this.stockReserved = stockReserved; }
     public boolean isPaymentCaptured() { return paymentCaptured; }
     public void setPaymentCaptured(boolean paymentCaptured) { this.paymentCaptured = paymentCaptured; }
+    public boolean isPharmacyReady() { return pharmacyReady; }
+    public void setPharmacyReady(boolean pharmacyReady) { this.pharmacyReady = pharmacyReady; }
     public boolean isShipmentReserved() { return shipmentReserved; }
     public void setShipmentReserved(boolean shipmentReserved) { this.shipmentReserved = shipmentReserved; }
+    public boolean isDelivered() { return delivered; }
+    public void setDelivered(boolean delivered) { this.delivered = delivered; }
     public boolean isCompensated() { return compensated; }
     public void setCompensated(boolean compensated) { this.compensated = compensated; }
+    public String getPaymentCommandJson() { return paymentCommandJson; }
+    public void setPaymentCommandJson(String paymentCommandJson) { this.paymentCommandJson = paymentCommandJson; }
+    public String getShipmentCommandJson() { return shipmentCommandJson; }
+    public void setShipmentCommandJson(String shipmentCommandJson) { this.shipmentCommandJson = shipmentCommandJson; }
+    public String getLastEventId() { return lastEventId; }
+    public void setLastEventId(String lastEventId) { this.lastEventId = lastEventId; }
     public String getFailureReason() { return failureReason; }
     public void setFailureReason(String failureReason) { this.failureReason = failureReason; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(Instant updatedAt) { this.updatedAt = updatedAt; }
+    public Instant getStepStartedAt() { return stepStartedAt; }
+    public void setStepStartedAt(Instant stepStartedAt) { this.stepStartedAt = stepStartedAt; }
 }

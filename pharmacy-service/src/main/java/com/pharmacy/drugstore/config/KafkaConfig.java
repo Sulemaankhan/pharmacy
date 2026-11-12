@@ -1,5 +1,6 @@
 package com.pharmacy.drugstore.config;
 
+import com.pharmacy.drugstore.kafka.DomainEvent;
 import com.pharmacy.drugstore.kafka.PaymentResult;
 import com.pharmacy.drugstore.kafka.ShipmentResult;
 import com.pharmacy.drugstore.kafka.StockResult;
@@ -12,6 +13,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.kafka.KafkaProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
+import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.config.TopicBuilder;
 import org.springframework.kafka.core.ConsumerFactory;
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
@@ -20,6 +23,7 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.core.ProducerFactory;
 import org.springframework.kafka.listener.ConcurrentMessageListenerContainer;
 import org.springframework.kafka.listener.ContainerProperties;
+import org.springframework.kafka.listener.DefaultErrorHandler;
 import org.springframework.kafka.requestreply.ReplyingKafkaTemplate;
 import org.springframework.kafka.support.serializer.JsonDeserializer;
 import org.springframework.kafka.support.serializer.JsonSerializer;
@@ -32,37 +36,62 @@ public class KafkaConfig {
 
     @Bean
     public NewTopic paymentCommandsTopic(@Value("${app.kafka.topics.payment-commands}") String name) {
-        return TopicBuilder.name(name).partitions(3).replicas(1).build();
+        return topic(name);
     }
 
     @Bean
     public NewTopic paymentRepliesTopic(@Value("${app.kafka.topics.payment-replies}") String name) {
-        return TopicBuilder.name(name).partitions(3).replicas(1).build();
+        return topic(name);
+    }
+
+    @Bean
+    public NewTopic paymentEventsTopic(@Value("${app.kafka.topics.payment-events}") String name) {
+        return topic(name);
     }
 
     @Bean
     public NewTopic notificationCommandsTopic(@Value("${app.kafka.topics.notification-commands}") String name) {
-        return TopicBuilder.name(name).partitions(3).replicas(1).build();
+        return topic(name);
     }
 
     @Bean
     public NewTopic shipmentCommandsTopic(@Value("${app.kafka.topics.shipment-commands}") String name) {
-        return TopicBuilder.name(name).partitions(3).replicas(1).build();
+        return topic(name);
     }
 
     @Bean
     public NewTopic shipmentRepliesTopic(@Value("${app.kafka.topics.shipment-replies}") String name) {
-        return TopicBuilder.name(name).partitions(3).replicas(1).build();
+        return topic(name);
+    }
+
+    @Bean
+    public NewTopic shipmentEventsTopic(@Value("${app.kafka.topics.shipment-events}") String name) {
+        return topic(name);
     }
 
     @Bean
     public NewTopic stockCommandsTopic(@Value("${app.kafka.topics.stock-commands}") String name) {
-        return TopicBuilder.name(name).partitions(3).replicas(1).build();
+        return topic(name);
     }
 
     @Bean
     public NewTopic stockRepliesTopic(@Value("${app.kafka.topics.stock-replies}") String name) {
-        return TopicBuilder.name(name).partitions(3).replicas(1).build();
+        return topic(name);
+    }
+
+    @Bean
+    public NewTopic inventoryEventsTopic(@Value("${app.kafka.topics.inventory-events}") String name) {
+        return topic(name);
+    }
+
+    @Bean
+    public NewTopic orderEventsTopic(@Value("${app.kafka.topics.order-events}") String name) {
+        return topic(name);
+    }
+
+    @Bean
+    public NewTopic fulfilmentEventsTopic(@Value("${app.kafka.topics.fulfilment-events}") String name) {
+        return topic(name);
     }
 
     @Bean
@@ -70,11 +99,44 @@ public class KafkaConfig {
         Map<String, Object> config = new HashMap<>(properties.buildProducerProperties(null));
         config.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
         config.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
+        config.put(ProducerConfig.ACKS_CONFIG, "all");
+        config.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, true);
         config.put(JsonSerializer.ADD_TYPE_INFO_HEADERS, false);
         return new DefaultKafkaProducerFactory<>(config);
     }
 
     @Bean
+    public ConsumerFactory<String, DomainEvent> domainEventConsumerFactory(KafkaProperties properties) {
+        Map<String, Object> config = new HashMap<>(properties.buildConsumerProperties(null));
+        config.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+        config.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false);
+        config.remove(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG);
+        config.keySet().removeIf(key -> key.startsWith("spring.json."));
+        JsonDeserializer<DomainEvent> deserializer = new JsonDeserializer<>(DomainEvent.class, false);
+        deserializer.addTrustedPackages("*");
+        deserializer.setUseTypeHeaders(false);
+        return new DefaultKafkaConsumerFactory<>(config, new StringDeserializer(), deserializer);
+    }
+
+    @Bean
+    public ConcurrentKafkaListenerContainerFactory<String, DomainEvent> sagaEventListenerFactory(
+            ConsumerFactory<String, DomainEvent> domainEventConsumerFactory,
+            DefaultErrorHandler kafkaErrorHandler) {
+        ConcurrentKafkaListenerContainerFactory<String, DomainEvent> factory =
+                new ConcurrentKafkaListenerContainerFactory<>();
+        factory.setConsumerFactory(domainEventConsumerFactory);
+        factory.setCommonErrorHandler(kafkaErrorHandler);
+        factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.RECORD);
+        factory.getContainerProperties().setMissingTopicsFatal(false);
+        return factory;
+    }
+
+    private static NewTopic topic(String name) {
+        return TopicBuilder.name(name).partitions(6).replicas(1).build();
+    }
+
+    @Bean
+    @Primary
     public KafkaTemplate<String, Object> kafkaTemplate(ProducerFactory<String, Object> producerFactory) {
         return new KafkaTemplate<>(producerFactory);
     }

@@ -14,7 +14,7 @@ import java.util.Set;
 public class MailClient {
     private static final Logger log = LoggerFactory.getLogger(MailClient.class);
     private final EmailNotificationLogRepository logs;
-    private final SmtpMailSender smtp = new SmtpMailSender();
+    private final SmtpGateway smtp;
     private final String host;
     private final int port;
     private final String username;
@@ -23,12 +23,14 @@ public class MailClient {
 
     public MailClient(
             EmailNotificationLogRepository logs,
+            SmtpGateway smtp,
             @Value("${spring.mail.host:smtp.gmail.com}") String host,
             @Value("${spring.mail.port:587}") int port,
             @Value("${spring.mail.username:}") String username,
             @Value("${spring.mail.password:}") String password,
             @Value("${app.mail.from:}") String from) {
         this.logs = logs;
+        this.smtp = smtp;
         this.host = host == null ? "smtp.gmail.com" : host.trim();
         this.port = port;
         this.username = username == null ? "" : username.trim();
@@ -37,10 +39,14 @@ public class MailClient {
     }
 
     public String send(String type, String to, String subject, String body) {
-        return send(type, List.of(to), subject, body);
+        return send(type, null, List.of(to), subject, body);
     }
 
     public String send(String type, List<String> recipients, String subject, String body) {
+        return send(type, null, recipients, subject, body);
+    }
+
+    public String send(String type, String orderNumber, List<String> recipients, String subject, String body) {
         Set<String> to = new LinkedHashSet<>();
         if (recipients != null) {
             for (String address : recipients) {
@@ -55,9 +61,15 @@ public class MailClient {
         String joined = String.join(", ", to);
         EmailNotificationLog row = new EmailNotificationLog();
         row.setType(type);
+        row.setOrderNumber(orderNumber);
         row.setRecipient(joined);
         row.setSubject(subject);
         row.setBody(body);
+        if (orderNumber != null && !orderNumber.isBlank()
+                && logs.existsByTypeAndOrderNumberAndStatus(type, orderNumber, "SENT")) {
+            log.info("Email skipped duplicate type={} orderNumber={}", type, orderNumber);
+            return "Email already sent to " + joined;
+        }
 
         if (username.isBlank() || password.isBlank()) {
             row.setStatus("NOT_CONFIGURED");
@@ -76,8 +88,8 @@ public class MailClient {
         } catch (Exception ex) {
             row.setStatus("FAILED");
             logs.save(row);
-            log.error("Email delivery failed type={} to={}", type, joined, ex);
-            throw new IllegalStateException("Could not deliver email to " + joined + ": " + ex.getMessage(), ex);
+            log.warn("Email delivery failed type={} to={} reason={}", type, joined, ex.getMessage());
+            throw new IllegalStateException("Could not deliver email to " + joined + ": " + ex.getMessage());
         }
     }
 }

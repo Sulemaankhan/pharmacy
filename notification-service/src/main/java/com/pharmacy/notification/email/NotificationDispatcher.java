@@ -24,19 +24,27 @@ public class NotificationDispatcher {
                 kind, command.orderNumber(), EmailBodies.recipients(command));
         switch (kind) {
             case "PAYMENT_SUCCESS" -> mailClient.send(
-                    kind, EmailBodies.recipients(command),
+                    kind, command.orderNumber(), EmailBodies.recipients(command),
                     "Order successful - " + dash(command.orderNumber()),
                     EmailBodies.paymentSuccess(command));
             case "PAYMENT_FAILURE" -> mailClient.send(
-                    kind, EmailBodies.recipients(command),
-                    "Order payment failed - " + dash(command.orderNumber()),
+                    kind, command.orderNumber(), EmailBodies.recipients(command),
+                    "Order failed - " + dash(command.orderNumber()),
                     EmailBodies.paymentFailure(command));
             case "ORDER_DETAILS" -> mailClient.send(
-                    kind, EmailBodies.recipients(command),
+                    kind, command.orderNumber(), EmailBodies.recipients(command),
                     "Your order details - " + dash(command.orderNumber()),
                     EmailBodies.orderDetails(command));
+            case "SHIPMENT_PICKED_UP" -> mailClient.send(
+                    kind, command.orderNumber(), EmailBodies.recipients(command),
+                    "Your order is on the way - " + dash(command.orderNumber()),
+                    EmailBodies.shipmentPickedUp(command));
+            case "ORDER_DELIVERED" -> mailClient.send(
+                    kind, command.orderNumber(), EmailBodies.recipients(command),
+                    "Your order was delivered - " + dash(command.orderNumber()),
+                    EmailBodies.orderDelivered(command));
             case "PASSWORD_RESET" -> mailClient.send(
-                    kind, EmailBodies.recipients(command),
+                    kind, command.orderNumber(), EmailBodies.recipients(command),
                     "Reset your Medicine Drugstore password",
                     EmailBodies.passwordReset(command));
             default -> throw new IllegalArgumentException("Unsupported notification kind: " + kind);

@@ -44,4 +44,9 @@ public record DebitResponse(
         return new DebitResponse(true, "Amount refunded to customer and reversed from pharmacy",
                 gatewayRef, BigDecimal.ZERO, customerBalance, refunded, pharmacyBalance);
     }
+
+    public static DebitResponse nothingToRefund(BigDecimal available) {
+        return new DebitResponse(true, "No debit to refund",
+                null, BigDecimal.ZERO, available, BigDecimal.ZERO, available);
+    }
 }

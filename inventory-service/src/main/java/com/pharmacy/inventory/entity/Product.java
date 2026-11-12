@@ -10,6 +10,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import java.math.BigDecimal;
 import java.time.Instant;
 
@@ -31,6 +32,8 @@ public class Product {
     private String imageUrl;
     private String brand;
     private Integer stock = 0;
+    @Version
+    private Long version;
     private Double rating = 4.5;
     private Integer reviewCount = 0;
     private boolean dealOfTheDay = false;
@@ -51,6 +54,7 @@ public class Product {
     public String getBrand() { return brand; }
     public Integer getStock() { return stock; }
     public void setStock(Integer stock) { this.stock = stock; }
+    public Long getVersion() { return version; }
     public Double getRating() { return rating; }
     public Integer getReviewCount() { return reviewCount; }
     public boolean isDealOfTheDay() { return dealOfTheDay; }

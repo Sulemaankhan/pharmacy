@@ -2,12 +2,15 @@ package com.pharmacy.inventory.service;
 
 import com.pharmacy.inventory.entity.Product;
 import com.pharmacy.inventory.entity.StockReservation;
+import com.pharmacy.inventory.event.DomainEvent;
 import com.pharmacy.inventory.event.StockCommand;
 import com.pharmacy.inventory.event.StockResult;
+import com.pharmacy.inventory.reliability.OutboxService;
 import com.pharmacy.inventory.repository.ProductRepository;
 import com.pharmacy.inventory.repository.StockReservationRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.LinkedHashMap;
@@ -19,10 +22,18 @@ public class StockService {
     private static final Logger log = LoggerFactory.getLogger(StockService.class);
     private final ProductRepository products;
     private final StockReservationRepository reservations;
+    private final OutboxService outbox;
+    private final String inventoryEvents;
 
-    public StockService(ProductRepository products, StockReservationRepository reservations) {
+    public StockService(
+            ProductRepository products,
+            StockReservationRepository reservations,
+            OutboxService outbox,
+            @Value("${app.kafka.topics.inventory-events}") String inventoryEvents) {
         this.products = products;
         this.reservations = reservations;
+        this.outbox = outbox;
+        this.inventoryEvents = inventoryEvents;
     }
 
     @Transactional
@@ -31,13 +42,21 @@ public class StockService {
             return StockResult.fail(command, "Stock command was empty");
         }
         String action = command.action().trim().toUpperCase();
+        StockResult result;
         if ("RESERVE".equals(action)) {
-            return reserve(command);
+            result = reserve(command);
+        } else if ("RELEASE".equals(action)) {
+            result = release(command);
+        } else {
+            result = StockResult.fail(command, "Unsupported stock action " + action);
         }
-        if ("RELEASE".equals(action)) {
-            return release(command);
+        if ("RESERVE".equals(action)) {
+            publish(command, result.success() ? "INVENTORY_RESERVED" : "INVENTORY_FAILED",
+                    result.success(), result.message());
+        } else if ("RELEASE".equals(action) && result.success()) {
+            publish(command, "INVENTORY_RELEASED", true, result.message());
         }
-        return StockResult.fail(command, "Unsupported stock action " + action);
+        return result;
     }
 
     private StockResult reserve(StockCommand command) {
@@ -111,6 +130,18 @@ public class StockService {
         reservations.save(reservation);
         log.info("Stock released orderNumber={}", command.orderNumber());
         return StockResult.ok(command, "Stock released");
+    }
+
+    private void publish(StockCommand command, String eventType, boolean success, String message) {
+        if (command == null || command.orderNumber() == null) {
+            return;
+        }
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("success", success);
+        payload.put("message", message);
+        payload.put("action", command.action());
+        DomainEvent event = DomainEvent.of(eventType, command.orderNumber(), command.correlationId(), payload);
+        outbox.enqueue(inventoryEvents, command.orderNumber(), event);
     }
 
     private static Map<Long, Integer> parse(String lines) {

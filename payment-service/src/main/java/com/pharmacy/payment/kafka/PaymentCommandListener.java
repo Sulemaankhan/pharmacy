@@ -2,129 +2,43 @@ package com.pharmacy.payment.kafka;
 
 import com.pharmacy.payment.event.PaymentCommand;
 import com.pharmacy.payment.event.PaymentResult;
-import com.pharmacy.payment.gateway.DebitRequest;
-import com.pharmacy.payment.gateway.DebitResponse;
-import com.pharmacy.payment.gateway.PaymentGatewayClient;
-import com.pharmacy.payment.payment.PaymentMode;
-import com.pharmacy.payment.strategy.PaymentContext;
-import com.pharmacy.payment.strategy.PaymentOutcome;
-import com.pharmacy.payment.strategy.PaymentStrategyRegistry;
+import com.pharmacy.payment.service.PaymentProcessingService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.stereotype.Component;
-import java.math.BigDecimal;
 
 @Component
 public class PaymentCommandListener {
     private static final Logger log = LoggerFactory.getLogger(PaymentCommandListener.class);
-    private final PaymentStrategyRegistry strategies;
-    private final PaymentGatewayClient gateway;
+    private final PaymentProcessingService payments;
 
-    public PaymentCommandListener(PaymentStrategyRegistry strategies, PaymentGatewayClient gateway) {
-        this.strategies = strategies;
-        this.gateway = gateway;
+    public PaymentCommandListener(PaymentProcessingService payments) {
+        this.payments = payments;
     }
 
     @KafkaListener(topics = "${app.kafka.topics.payment-commands}", groupId = "payment-service")
-    @SendTo
+    @SendTo("${app.kafka.topics.payment-replies}")
     public PaymentResult onCommand(PaymentCommand command) {
         if (command == null) {
             return PaymentResult.fail(null, "Payment command was empty");
         }
-        String action = command.action() == null || command.action().isBlank()
-                ? "CHARGE" : command.action().trim().toUpperCase();
-        if ("REFUND".equals(action)) {
-            return refund(command);
-        }
-        return charge(command);
-    }
-
-    private PaymentResult charge(PaymentCommand command) {
-        log.info("Payment charge received orderNumber={} mode={} amount={} email={}",
-                command.orderNumber(), command.paymentMode(), command.amount(), command.customerEmail());
+        log.info("Payment command received action={} orderNumber={} txn={}",
+                command.action(), command.orderNumber(), command.transactionRef());
         try {
-            PaymentMode mode = PaymentMode.valueOf(command.paymentMode());
-            PaymentOutcome outcome = strategies.of(mode)
-                    .process(new PaymentContext(command.amount(), command.orderNumber(), command));
-            if (!outcome.success()) {
-                log.info("Payment instrument declined orderNumber={} message={}",
-                        command.orderNumber(), outcome.message());
-                return PaymentResult.fail(command, outcome.message(), outcome.maskedInstrument(), null);
-            }
-
-            DebitResponse debit = gateway.debit(toGatewayRequest(command));
-            if (debit == null || !debit.success()) {
-                String message = debit == null ? "Payment gateway declined the charge" : debit.message();
-                log.warn("Account debit rejected orderNumber={} message={}", command.orderNumber(), message);
-                return PaymentResult.fail(command, message, outcome.maskedInstrument(), null);
-            }
-
-            String ref = debit.gatewayRef() != null ? debit.gatewayRef() : outcome.gatewayRef();
-            log.info("Payment captured orderNumber={} debited={} pharmacyCredited={}",
-                    command.orderNumber(), debit.debitedAmount(), debit.creditedAmount());
-            return new PaymentResult(
-                    command.correlationId(),
-                    command.orderNumber(),
-                    command.transactionRef(),
-                    true,
-                    ref,
-                    outcome.message() + " Debited ₹" + amount(debit.debitedAmount())
-                            + ". Credited pharmacy ₹" + amount(debit.creditedAmount()) + ".",
-                    outcome.maskedInstrument(),
-                    debit.debitedAmount(),
-                    null,
-                    debit.creditedAmount(),
-                    null);
+            return payments.handle(command);
         } catch (Exception ex) {
-            log.warn("Payment processing failed orderNumber={} reason={}", command.orderNumber(), ex.getMessage());
-            return PaymentResult.fail(command, ex.getMessage() == null ? "Payment could not be processed" : ex.getMessage());
-        }
-    }
-
-    private PaymentResult refund(PaymentCommand command) {
-        log.info("Payment refund received orderNumber={} amount={} email={}",
-                command.orderNumber(), command.amount(), command.customerEmail());
-        try {
-            DebitResponse refund = gateway.refund(toGatewayRequest(command));
-            if (refund == null || !refund.success()) {
-                String message = refund == null ? "Payment gateway declined the refund" : refund.message();
-                log.warn("Account refund rejected orderNumber={} message={}", command.orderNumber(), message);
-                return PaymentResult.fail(command, message, null, null);
+            log.error("Payment command failed action={} orderNumber={}",
+                    command.action(), command.orderNumber(), ex);
+            try {
+                return payments.failClosed(command, ex.getMessage() == null
+                        ? "Payment could not be processed. Please try again."
+                        : ex.getMessage());
+            } catch (Exception nested) {
+                log.error("Payment fail-closed also failed orderNumber={}", command.orderNumber(), nested);
+                return PaymentResult.fail(command, "Payment could not be processed. Please try again.");
             }
-            log.info("Payment refunded orderNumber={} credited={}",
-                    command.orderNumber(), refund.creditedAmount());
-            return new PaymentResult(
-                    command.correlationId(),
-                    command.orderNumber(),
-                    command.transactionRef(),
-                    true,
-                    refund.gatewayRef(),
-                    "Refunded ₹" + amount(refund.creditedAmount()) + " to customer.",
-                    null,
-                    BigDecimal.ZERO,
-                    null,
-                    refund.creditedAmount(),
-                    null);
-        } catch (Exception ex) {
-            log.warn("Payment refund failed orderNumber={} reason={}", command.orderNumber(), ex.getMessage());
-            return PaymentResult.fail(command, ex.getMessage() == null ? "Refund could not be processed" : ex.getMessage());
         }
-    }
-
-    private static DebitRequest toGatewayRequest(PaymentCommand command) {
-        return new DebitRequest(
-                command.userId(),
-                command.customerEmail(),
-                command.customerName(),
-                command.amount(),
-                command.orderNumber(),
-                command.transactionRef(),
-                command.paymentMode());
-    }
-
-    private static String amount(BigDecimal value) {
-        return value == null ? "0.00" : value.toPlainString();
     }
 }

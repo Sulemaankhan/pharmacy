@@ -20,6 +20,7 @@ public class EmailNotificationLog {
     @Column(columnDefinition = "TEXT")
     private String body;
     private String type;
+    private String orderNumber;
     private String status;
     private Instant sentAt = Instant.now();
 
@@ -32,6 +33,8 @@ public class EmailNotificationLog {
     public void setBody(String body) { this.body = body; }
     public String getType() { return type; }
     public void setType(String type) { this.type = type; }
+    public String getOrderNumber() { return orderNumber; }
+    public void setOrderNumber(String orderNumber) { this.orderNumber = orderNumber; }
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
     public Instant getSentAt() { return sentAt; }

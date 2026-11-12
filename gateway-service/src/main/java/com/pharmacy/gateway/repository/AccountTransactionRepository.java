@@ -11,4 +11,7 @@ public interface AccountTransactionRepository extends JpaRepository<AccountTrans
     Optional<AccountTransaction> findByTransactionRefAndType(String transactionRef, String type);
     Optional<AccountTransaction> findByTransactionRefAndTypeAndAccount(
             String transactionRef, String type, CustomerAccount account);
+
+    Optional<AccountTransaction> findFirstByTransactionRefAndTypeOrderByCreatedAtAsc(
+            String transactionRef, String type);
 }

@@ -103,6 +103,75 @@ public class CheckoutService {
         return toPaymentCommand(user, order, request, mode);
     }
 
+    public com.pharmacy.drugstore.kafka.StockCommand stockCommand(CustomerOrder order) {
+        return new com.pharmacy.drugstore.kafka.StockCommand(
+                "RESERVE",
+                order.getPayment() == null ? order.getOrderNumber() : order.getPayment().getTransactionRef(),
+                order.getOrderNumber(),
+                order.getItems() == null ? java.util.List.of() : order.getItems().stream()
+                        .map(item -> new com.pharmacy.drugstore.kafka.StockCommand.StockLine(
+                                item.getProductId(), item.getQuantity(), item.getProductName()))
+                        .toList());
+    }
+
+    public com.pharmacy.drugstore.kafka.StockCommand releaseCommand(CustomerOrder order) {
+        return new com.pharmacy.drugstore.kafka.StockCommand(
+                "RELEASE",
+                order.getPayment() == null ? order.getOrderNumber() : order.getPayment().getTransactionRef(),
+                order.getOrderNumber(),
+                java.util.List.of());
+    }
+
+    public com.pharmacy.drugstore.kafka.ShipmentCommand shipmentCommand(
+            String type, User user, CustomerOrder order, Boolean paid) {
+        var shipment = order.getShipment();
+        if (shipment == null) {
+            return null;
+        }
+        return new com.pharmacy.drugstore.kafka.ShipmentCommand(
+                type,
+                user == null ? order.getUserId() : user.getId(),
+                user == null ? null : user.getEmail(),
+                order.getId(),
+                order.getOrderNumber(),
+                shipment.getTrackingNumber(),
+                paid,
+                shipment.getRecipientName(),
+                shipment.getAddress(),
+                shipment.getCity(),
+                shipment.getState(),
+                shipment.getPincode(),
+                shipment.getContactNumber(),
+                shipment.getEmail(),
+                shipment.getCarrier(),
+                shipment.getEstimatedDelivery(),
+                shipment.getCreatedAt(),
+                order.getPayment() == null ? order.getOrderNumber() : order.getPayment().getTransactionRef());
+    }
+
+    public void markFulfillment(String orderNumber, String status) {
+        tx.execute(txStatus -> {
+            CustomerOrder order = orders.findByOrderNumber(orderNumber).orElseThrow();
+            order.setFulfillmentStatus(status);
+            orders.saveAndFlush(order);
+            return order;
+        });
+    }
+
+    public CompletedCheckout markDelivered(String orderNumber) {
+        return tx.execute(txStatus -> {
+            CustomerOrder order = orders.findByOrderNumber(orderNumber).orElseThrow();
+            order.setFulfillmentStatus("DELIVERED");
+            orders.saveAndFlush(order);
+            return new CompletedCheckout(order, order.getPayment(), "Order delivered");
+        });
+    }
+
+    public PaymentResponse pendingResponse(CustomerOrder order, String message) {
+        PaymentTransaction txn = order.getPayment();
+        return toResponse(true, order, txn, message, "PENDING", null);
+    }
+
     public void recordCapture(Long userId, String orderNumber, PaymentResult result) {
         tx.execute(status -> {
             CustomerOrder order = orders.findByOrderNumberAndUserId(orderNumber, userId)
@@ -123,6 +192,7 @@ public class CheckoutService {
             applyGateway(txn, result);
             txn.setStatus(PaymentStatus.SUCCESS);
             order.setStatus(PaymentStatus.SUCCESS);
+            order.setFulfillmentStatus("CONFIRMED");
             shipments.markPaymentResult(order.getShipment(), true);
             if (!txn.isLedgerPosted()) {
                 ledger.post(txn);
@@ -151,6 +221,7 @@ public class CheckoutService {
                 txn.setRefunded(true);
             }
             order.setStatus(PaymentStatus.FAILED);
+            order.setFulfillmentStatus("CANCELLED");
             shipments.markPaymentResult(order.getShipment(), false);
             transactions.saveAndFlush(txn);
             orders.saveAndFlush(order);
@@ -245,6 +316,7 @@ public class CheckoutService {
         order.setOrderNumber(nextOrderNumber());
         order.setUser(user);
         order.setStatus(PaymentStatus.PENDING);
+        order.setFulfillmentStatus("CREATED");
         order.setSubtotal(subtotal);
         order.setShipping(shipping);
         order.setTotal(total);
@@ -327,7 +399,7 @@ public class CheckoutService {
         PaymentTransaction txn = order.getPayment();
         PaymentMode resolved = mode != null ? mode : txn.getPaymentMode();
         return new PaymentCommand(
-                UUID.randomUUID().toString(),
+                txn.getTransactionRef(),
                 order.getOrderNumber(),
                 txn.getTransactionRef(),
                 resolved == null ? null : resolved.name(),

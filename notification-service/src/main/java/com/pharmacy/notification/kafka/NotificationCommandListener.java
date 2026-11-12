@@ -23,11 +23,6 @@ public class NotificationCommandListener {
             return;
         }
         log.info("Notification command received kind={} orderNumber={}", command.kind(), command.orderNumber());
-        try {
-            dispatcher.send(command);
-        } catch (Exception ex) {
-            log.error("Notification failed kind={} orderNumber={} reason={}",
-                    command.kind(), command.orderNumber(), ex.getMessage());
-        }
+        dispatcher.send(command);
     }
 }

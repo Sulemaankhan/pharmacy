@@ -46,8 +46,8 @@ export default function OrderSuccess() {
     <div className="container page">
       <div className="auth-box" style={{ maxWidth: 560, textAlign: 'center' }}>
         <div className="success-badge">{success ? '✓' : '!'}</div>
-        <h2>{success ? 'Payment saved in database' : 'Payment not completed'}</h2>
-        <p className="lead">{order?.message || (success ? 'Order confirmed. A success notification was emailed to your account.' : 'Payment failed. A failure notification was emailed to your account.')}</p>
+        <h2>{success ? 'Order confirmed' : 'Order failed'}</h2>
+        <p className="lead">{order?.message || (success ? 'Your order is confirmed. A success notification was emailed to your account.' : 'Your order was cancelled. A failure notification was emailed to your account.')}</p>
         {(order?.emailStatus === 'SENT' || order?.emailStatus === 'QUEUED'
           || passed?.emailStatus === 'SENT' || passed?.emailStatus === 'QUEUED') && (
           <p className="toast-ok">Notification queued for email.</p>

@@ -26,6 +26,9 @@ public class CustomerOrder {
     @Enumerated(EnumType.STRING)
     private PaymentStatus status = PaymentStatus.PENDING;
 
+    @Column(length = 32)
+    private String fulfillmentStatus = "CREATED";
+
     @Column(precision = 10, scale = 2)
     private BigDecimal subtotal;
 
@@ -54,6 +57,8 @@ public class CustomerOrder {
     public void setUser(User user) { this.user = user; }
     public PaymentStatus getStatus() { return status; }
     public void setStatus(PaymentStatus status) { this.status = status; }
+    public String getFulfillmentStatus() { return fulfillmentStatus; }
+    public void setFulfillmentStatus(String fulfillmentStatus) { this.fulfillmentStatus = fulfillmentStatus; }
     public BigDecimal getSubtotal() { return subtotal; }
     public void setSubtotal(BigDecimal subtotal) { this.subtotal = subtotal; }
     public BigDecimal getShipping() { return shipping; }

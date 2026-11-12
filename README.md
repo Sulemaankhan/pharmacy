@@ -15,16 +15,41 @@ Medicine Drugstore is split into seven backend apps plus the React storefront.
 
 ## Kafka topics
 
-- `pharmacy.stock.commands` — pharmacy-service asks inventory to reserve or release stock
-- `pharmacy.stock.replies` — inventory returns reserved or insufficient
-- `pharmacy.payment.commands` — pharmacy-service asks the payment service to charge an order
-- `pharmacy.payment.replies` — payment service returns success or failure
-- `pharmacy.notification.commands` — pharmacy-service or customer-service asks the notification service to send email
-- `pharmacy.shipment.commands` — pharmacy-service asks the shipment service to reserve, confirm, or cancel a delivery
-- `pharmacy.shipment.replies` — shipment service returns reserved or unavailable
-- `pharmacy.shipment.updates` — shipment service publishes status changes
+Commands (partition key = `orderNumber`):
 
-Checkout is a **saga orchestrator** in pharmacy-service: Kafka-reserve stock → charge wallet → Kafka-reserve shipment. If any step fails, the orchestrator compensates in reverse: refunds the customer, reverses the pharmacy credit, Kafka-releases stock, and cancels the order.
+- `pharmacy.stock.commands` — reserve or release stock
+- `pharmacy.payment.commands` — charge or refund (idempotency key = `transactionRef`)
+- `pharmacy.shipment.commands` — pack, confirm, or cancel a delivery
+- `pharmacy.notification.commands` — send customer email
+
+Domain events (partition key = `orderNumber`):
+
+- `pharmacy.order.events` — `ORDER_CREATED`, `ORDER_CONFIRMED`, `ORDER_DELIVERED`, `ORDER_CANCELLED`
+- `pharmacy.inventory.events` — `INVENTORY_RESERVED`, `INVENTORY_FAILED`, `INVENTORY_RELEASED`
+- `pharmacy.payment.events` — `PAYMENT_SUCCESS`, `PAYMENT_FAILED`
+- `pharmacy.fulfilment.events` — `PACKAGE_READY`
+- `pharmacy.shipment.events` — `SHIPMENT_CREATED`, `SHIPMENT_PICKED_UP`, `SHIPMENT_DELIVERED`, `SHIPMENT_FAILED`
+- `pharmacy.shipment.updates` — live tracking snapshots
+- `pharmacy.saga.dlt` — dead-letter topic after Kafka retries
+
+Checkout is an **orchestrated saga** in pharmacy-service. The HTTP checkout writes `ORDER_CREATED` plus a stock command through a **transactional outbox**, then waits for payment. The workflow is:
+
+`ORDER_CREATED` → `INVENTORY_RESERVED` → `PAYMENT_SUCCESS` → `ORDER_CONFIRMED` → `PACKAGE_READY` → `SHIPMENT_CREATED` → `SHIPMENT_PICKED_UP` (customer notified) → `SHIPMENT_DELIVERED` → order `DELIVERED`.
+
+If payment fails: `PAYMENT_FAILED` → `RELEASE_INVENTORY` → `CANCEL_ORDER`.
+
+Production reliability:
+
+| Problem | Solution |
+|---|---|
+| Duplicate Kafka messages | Idempotency (`processed_events`, payment `transactionRef`) |
+| Event lost after DB commit | Transactional outbox |
+| Consumer crashes | Kafka retry with exponential backoff |
+| Repeated failures | Dead letter topic `pharmacy.saga.dlt` |
+| Duplicate payment request | Idempotency key `CHARGE:{transactionRef}` |
+| Concurrent medicine booking | Pessimistic row lock + `@Version` on inventory |
+| Payment status mismatch | Gateway reconciliation (`GET /internal/accounts/transactions/{ref}`) |
+| Event ordering | Partition by `orderNumber` |
 
 Login and profile stay **synchronous HTTP** (the UI needs the JWT immediately). Catalog listing is **synchronous HTTP**. Stock mutation is **Kafka request-reply** so the saga can wait and compensate.
 
