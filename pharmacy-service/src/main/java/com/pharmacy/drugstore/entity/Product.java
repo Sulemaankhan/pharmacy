@@ -27,9 +27,8 @@ public class Product {
 
     private String imageUrl;
     private String brand;
+    @Column(updatable = false)
     private Integer stock = 0;
-    @Version
-    private Long version;
     private Double rating = 4.5;
     private Integer reviewCount = 0;
     private boolean dealOfTheDay = false;

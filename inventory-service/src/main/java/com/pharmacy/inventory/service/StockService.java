@@ -13,7 +13,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -77,22 +79,21 @@ public class StockService {
             }
             qty.merge(line.productId(), line.quantity(), Integer::sum);
         }
-        Map<Long, Product> locked = products.lockAllById(qty.keySet()).stream()
+        Map<Long, Product> found = products.findAllById(qty.keySet()).stream()
                 .collect(Collectors.toMap(Product::getId, p -> p));
-        for (Map.Entry<Long, Integer> entry : qty.entrySet()) {
-            Product product = locked.get(entry.getKey());
-            if (product == null) {
-                return StockResult.fail(command, "Product not found: " + entry.getKey());
-            }
-            int available = product.getStock() == null ? 0 : product.getStock();
-            if (available < entry.getValue()) {
-                return StockResult.fail(command, "Insufficient stock for " + product.getName());
+        for (Long productId : qty.keySet()) {
+            if (!found.containsKey(productId)) {
+                return StockResult.fail(command, "Product not found: " + productId);
             }
         }
-        for (Map.Entry<Long, Integer> entry : qty.entrySet()) {
-            Product product = locked.get(entry.getKey());
-            product.setStock(product.getStock() - entry.getValue());
-            products.save(product);
+        List<Long> taken = new ArrayList<>();
+        for (Long productId : qty.keySet().stream().sorted().toList()) {
+            int wanted = qty.get(productId);
+            if (products.decrementIfAvailable(productId, wanted) != 1) {
+                restore(taken, qty);
+                return StockResult.fail(command, "Insufficient stock for " + found.get(productId).getName());
+            }
+            taken.add(productId);
         }
         StockReservation reservation = existing.orElseGet(StockReservation::new);
         reservation.setOrderNumber(command.orderNumber());
@@ -114,18 +115,7 @@ public class StockService {
             return StockResult.ok(command, "Stock already released");
         }
         Map<Long, Integer> qty = parse(reservation.getLines());
-        if (!qty.isEmpty()) {
-            Map<Long, Product> locked = products.lockAllById(qty.keySet()).stream()
-                    .collect(Collectors.toMap(Product::getId, p -> p));
-            for (Map.Entry<Long, Integer> entry : qty.entrySet()) {
-                Product product = locked.get(entry.getKey());
-                if (product == null || product.getStock() == null) {
-                    continue;
-                }
-                product.setStock(product.getStock() + entry.getValue());
-                products.save(product);
-            }
-        }
+        restore(qty.keySet().stream().sorted().toList(), qty);
         reservation.setStatus("RELEASED");
         reservations.save(reservation);
         log.info("Stock released orderNumber={}", command.orderNumber());
@@ -142,6 +132,16 @@ public class StockService {
         payload.put("action", command.action());
         DomainEvent event = DomainEvent.of(eventType, command.orderNumber(), command.correlationId(), payload);
         outbox.enqueue(inventoryEvents, command.orderNumber(), event);
+    }
+
+    private void restore(List<Long> productIds, Map<Long, Integer> qty) {
+        for (Long productId : productIds) {
+            Integer amount = qty.get(productId);
+            if (productId == null || amount == null || amount < 1) {
+                continue;
+            }
+            products.incrementStock(productId, amount);
+        }
     }
 
     private static Map<Long, Integer> parse(String lines) {

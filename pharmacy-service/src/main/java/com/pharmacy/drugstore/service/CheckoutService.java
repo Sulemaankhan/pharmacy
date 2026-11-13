@@ -298,11 +298,11 @@ public class CheckoutService {
     }
 
     private CustomerOrder createPendingOrder(User user, PaymentRequest request, List<CartItem> cart, PaymentMode mode) {
-        Map<Long, Product> locked = lockStock(cart);
+        Map<Long, Product> catalog = loadCatalog(cart);
 
         BigDecimal subtotal = BigDecimal.ZERO;
         for (CartItem item : cart) {
-            Product product = locked.get(item.getProduct().getId());
+            Product product = catalog.get(item.getProduct().getId());
             if (product.getStock() == null || product.getStock() < item.getQuantity()) {
                 throw new ResponseStatusException(HttpStatus.CONFLICT,
                         "Insufficient stock for " + product.getName());
@@ -321,7 +321,7 @@ public class CheckoutService {
         order.setShipping(shipping);
         order.setTotal(total);
         for (CartItem cartItem : cart) {
-            Product product = locked.get(cartItem.getProduct().getId());
+            Product product = catalog.get(cartItem.getProduct().getId());
             OrderItem line = new OrderItem();
             line.setOrder(order);
             line.setProductId(product.getId());
@@ -371,9 +371,9 @@ public class CheckoutService {
         return order;
     }
 
-    private Map<Long, Product> lockStock(List<CartItem> cart) {
+    private Map<Long, Product> loadCatalog(List<CartItem> cart) {
         List<Long> ids = cart.stream().map(item -> item.getProduct().getId()).distinct().toList();
-        return products.lockAllById(ids).stream().collect(Collectors.toMap(Product::getId, Function.identity()));
+        return products.findAllById(ids).stream().collect(Collectors.toMap(Product::getId, Function.identity()));
     }
 
     private PaymentTransaction requireTxn(CustomerOrder order) {

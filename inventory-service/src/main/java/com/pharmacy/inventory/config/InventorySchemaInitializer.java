@@ -33,36 +33,9 @@ public class InventorySchemaInitializer implements SmartLifecycle {
                             + "UNIQUE KEY uk_stock_reservations_order_number (order_number)"
                             + ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
             );
-            ensureProductVersion();
             log.info("Inventory schema ready table=stock_reservations");
         });
         running = true;
-    }
-
-    /**
-     * Catalog rows were inserted before products.version existed, so the column is NULL.
-     * Hibernate NPEs while incrementing @Version, the commit rolls back, and the stock command is retried forever.
-     */
-    private void ensureProductVersion() {
-        Integer tables = jdbc.queryForObject(
-                "SELECT COUNT(*) FROM information_schema.TABLES "
-                        + "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'products'",
-                Integer.class);
-        if (tables == null || tables == 0) {
-            return;
-        }
-        Integer columns = jdbc.queryForObject(
-                "SELECT COUNT(*) FROM information_schema.COLUMNS "
-                        + "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'products' AND COLUMN_NAME = 'version'",
-                Integer.class);
-        if (columns == null || columns == 0) {
-            jdbc.execute("ALTER TABLE products ADD COLUMN version BIGINT NOT NULL DEFAULT 0");
-            log.info("Added products.version default=0");
-            return;
-        }
-        int filled = jdbc.update("UPDATE products SET version = 0 WHERE version IS NULL");
-        jdbc.execute("ALTER TABLE products MODIFY COLUMN version BIGINT NOT NULL DEFAULT 0");
-        log.info("Products version column ready backfilled={}", filled);
     }
 
     @Override
