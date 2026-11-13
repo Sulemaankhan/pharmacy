@@ -1,5 +1,6 @@
 target/
 logs/
+monitoring/.runtime/
 *.iml
 .idea/
 .DS_Store
