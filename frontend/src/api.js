@@ -2,7 +2,17 @@ import { clientLog, newRequestId, redact } from './log'
 
 const TOKEN = 'pharmacy_token'
 const USER = 'pharmacy_user'
-const API_BASES = ['', 'http://localhost:8082']
+export const GATEWAY_BASE = 'http://localhost:8095'
+const API_BASES = [GATEWAY_BASE]
+
+function requestOptions(options, headers) {
+  return {
+    ...options,
+    headers,
+    mode: 'cors',
+    credentials: 'omit',
+  }
+}
 
 const authClearedListeners = new Set()
 
@@ -148,7 +158,7 @@ export async function api(path, options = {}) {
   let unauthorized = false
   for (const base of API_BASES) {
     try {
-      const res = await fetch(`${base}${path}`, { ...options, headers })
+      const res = await fetch(`${base}${path}`, requestOptions(options, headers))
       const backendRequestId = res.headers.get('X-Request-Id') || requestId
       clientLog(res.ok ? 'info' : 'warn', 'api.response', {
         requestId: backendRequestId,
@@ -195,7 +205,7 @@ export async function apiUpload(path, file) {
   let unauthorized = false
   for (const base of API_BASES) {
     try {
-      const res = await fetch(`${base}${path}`, { method: 'POST', headers, body })
+      const res = await fetch(`${base}${path}`, requestOptions({ method: 'POST', body }, headers))
       const backendRequestId = res.headers.get('X-Request-Id') || requestId
       clientLog(res.ok ? 'info' : 'warn', 'api.response', {
         requestId: backendRequestId,
@@ -249,7 +259,7 @@ export async function downloadFile(path, fallbackName) {
   let unauthorized = false
   for (const base of API_BASES) {
     try {
-      const res = await fetch(`${base}${path}`, { headers })
+      const res = await fetch(`${base}${path}`, requestOptions({}, headers))
       const contentType = (res.headers.get('Content-Type') || '').toLowerCase()
       if (!res.ok) {
         if (res.status === 401) unauthorized = true

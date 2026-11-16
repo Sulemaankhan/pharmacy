@@ -128,8 +128,7 @@ export function StoreProvider({ children }) {
     clearPrivateState(setCart, setWishlist, setOrders)
     refreshUserData(userId).catch(() => {})
     refreshProfile().catch(() => {})
-    const timer = setInterval(() => refreshProfile().catch(() => {}), 8000)
-    return () => clearInterval(timer)
+    return undefined
   }, [user?.userId])
 
   useEffect(() => {

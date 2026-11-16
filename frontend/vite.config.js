@@ -6,13 +6,18 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      '/api': 'http://localhost:8082',
+      '/api': {
+        target: 'http://localhost:8095',
+        changeOrigin: true,
+      },
       '/ws/shipments': {
-        target: 'http://localhost:8085',
+        target: 'http://localhost:8095',
+        changeOrigin: true,
         ws: true,
       },
       '/ws/accounts': {
-        target: 'http://localhost:8086',
+        target: 'http://localhost:8095',
+        changeOrigin: true,
         ws: true,
       },
     }

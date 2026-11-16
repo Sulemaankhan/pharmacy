@@ -1,17 +1,30 @@
 # Pharmacy
 
-Medicine Drugstore is split into seven backend apps plus the React storefront.
+Medicine Drugstore is split into eight backend apps plus the React storefront.
 
 | App | Path | Port | Role | Communication |
 |---|---|---|---|---|
-| Pharmacy Service | `backend` | 8082 | BFF, cart, orders, checkout saga | HTTP + Kafka orchestrator |
+| Cloud Gateway | `cloud-gateway` | 8095 | Reactive Spring Cloud Gateway + JWT security; single client entry point | Non-blocking HTTP + WebSocket proxy |
+| Pharmacy Service | `pharmacy-service` | 8082 | BFF, cart, orders, checkout saga | HTTP + Kafka orchestrator |
 | Customer service | `customer-service` | 8087 | Register, login, profile, password reset | Sync HTTP |
 | Inventory service | `inventory-service` | 8088 | Catalog HTTP; stock reserve/release | HTTP + Kafka request-reply |
 | Payment Kafka service | `payment-service` | 8083 | Validates UPI/card/wallet/COD then charges the gateway | Kafka request-reply |
 | Gateway service | `gateway-service` | 8086 | Customer accounts, debit transactions, live balance | HTTP + WebSocket |
 | Notification Kafka service | `notification-service` | 8084 | Sends order and password-reset emails | Kafka fire-and-forget |
 | Shipment Kafka service | `shipment-service` | 8085 | Advances delivery and pushes live tracking | Kafka request-reply + WebSocket |
-| Pharmacy UI | `frontend` | 5173 | Vite + React UI | HTTP to pharmacy-service 8082 |
+| Pharmacy UI | `frontend` | 5173 | Vite + React UI | HTTP/WebSocket through cloud-gateway 8095 |
+
+Client routes through `cloud-gateway`:
+
+| Incoming path | Downstream service |
+|---|---|
+| `/api/auth/**` | customer-service `:8087` |
+| `/api/products/**`, `/api/categories/**` | inventory-service `:8088` |
+| `/api/**` (cart, profile, orders, payments, account, shipments, health reports) | pharmacy-service `:8082` |
+| `/ws/shipments` | shipment-service `:8085` |
+| `/ws/accounts` | gateway-service `:8086` |
+
+Payment-service and notification-service stay Kafka-only and are not exposed to browsers.
 
 ## Kafka topics
 
@@ -53,8 +66,8 @@ Production reliability:
 
 Login and profile stay **synchronous HTTP** (the UI needs the JWT immediately). Catalog listing is **synchronous HTTP**. Stock mutation is **Kafka request-reply** so the saga can wait and compensate.
 
-Live tracking uses **WebSocket** from the browser to `shipment-service` (`/ws/shipments`).
-Live wallet balance uses **WebSocket** from the browser to `gateway-service` (`/ws/accounts`).
+Live tracking uses **WebSocket** from the browser through cloud-gateway to `shipment-service` (`/ws/shipments`).
+Live wallet balance uses **WebSocket** from the browser through cloud-gateway to `gateway-service` (`/ws/accounts`).
 
 Customer money lives in MySQL tables `customer_accounts` and `account_transactions` (owned by gateway-service). New wallets open with ₹10,000. Checkout **debits the logged-in customer** and **credits the pharmacy account** (`pharmacy@pharmacy.com`) in the same transaction. Insufficient funds fail the payment without charging.
 
@@ -73,14 +86,15 @@ docker compose up -d
 ```bash
 cd customer-service && mvn spring-boot:run
 cd inventory-service && mvn spring-boot:run
-cd backend && mvn spring-boot:run
+cd pharmacy-service && mvn spring-boot:run
 cd payment-service && mvn spring-boot:run
 cd gateway-service && mvn spring-boot:run
 cd notification-service && mvn spring-boot:run
 cd shipment-service && mvn spring-boot:run
+cd cloud-gateway && mvn spring-boot:run
 ```
 
-Start `customer-service`, `inventory-service`, and `gateway-service` before using the storefront. Profile → Account shows available balance and every CREDIT/DEBIT row.
+Start `cloud-gateway` last so it can reach the downstream services. Start `customer-service`, `inventory-service`, and `gateway-service` before using the storefront. Profile → Account shows available balance and every CREDIT/DEBIT row.
 
 4. Start the storefront:
 

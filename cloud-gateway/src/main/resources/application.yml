@@ -1,0 +1,84 @@
+server:
+  port: 8095
+
+spring:
+  application:
+    name: cloud-gateway
+  main:
+    web-application-type: reactive
+  codec:
+    max-in-memory-size: 16MB
+  cloud:
+    gateway:
+      forwarded:
+        enabled: false
+      x-forwarded:
+        enabled: false
+      httpclient:
+        connect-timeout: 5000
+        response-timeout: 90s
+        websocket:
+          max-frame-payload-length: 65536
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin Access-Control-Allow-Methods Access-Control-Allow-Headers Access-Control-Expose-Headers Access-Control-Max-Age, RETAIN_FIRST
+      routes:
+        - id: customer-auth
+          uri: ${app.services.customer}
+          predicates:
+            - Path=/api/auth/**
+        - id: inventory-catalog
+          uri: ${app.services.inventory}
+          predicates:
+            - Path=/api/products/**,/api/categories/**
+        - id: pharmacy-api
+          uri: ${app.services.pharmacy}
+          predicates:
+            - Path=/api/**
+        - id: shipment-websocket
+          uri: ${app.services.shipment}
+          predicates:
+            - Path=/ws/shipments,/ws/shipments/**
+        - id: accounts-websocket
+          uri: ${app.services.accounts}
+          predicates:
+            - Path=/ws/accounts,/ws/accounts/**
+
+app:
+  jwt:
+    secret: MedicineDrugstoreJwtSecretKeyMustBeAtLeast256BitsLongForHS256Algo
+  services:
+    customer: ${CUSTOMER_SERVICE_URL:http://localhost:8087}
+    inventory: ${INVENTORY_SERVICE_URL:http://localhost:8088}
+    pharmacy: ${PHARMACY_SERVICE_URL:http://localhost:8082}
+    shipment: ${SHIPMENT_SERVICE_URL:http://localhost:8085}
+    accounts: ${GATEWAY_SERVICE_URL:http://localhost:8086}
+
+info:
+  app:
+    name: Pharmacy Cloud Gateway
+    description: Single entry point that routes client traffic to pharmacy microservices
+    version: 1.0.0
+
+management:
+  endpoints:
+    web:
+      base-path: /actuator
+      exposure:
+        include: health,info,metrics,prometheus,gateway
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true
+    gateway:
+      enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
+
+logging:
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+  level:
+    org.springframework.cloud.gateway: INFO
+    com.pharmacy.cloudgateway: INFO

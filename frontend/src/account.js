@@ -1,4 +1,4 @@
-import { api, getToken } from './api'
+import { api, GATEWAY_BASE, getToken } from './api'
 
 export async function fetchAccount() {
   return api('/api/account')
@@ -13,8 +13,8 @@ function accountSocketUrl(userId) {
   const params = new URLSearchParams()
   if (token) params.set('token', token)
   if (userId) params.set('userId', String(userId))
-  const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws'
-  return `${protocol}://${window.location.host}/ws/accounts?${params.toString()}`
+  const wsBase = GATEWAY_BASE.replace(/^http/, 'ws')
+  return `${wsBase}/ws/accounts?${params.toString()}`
 }
 
 export function connectAccountSocket({ userId, onUpdate }) {

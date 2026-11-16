@@ -1,4 +1,4 @@
-import { api, asList, getToken } from './api'
+import { api, asList, GATEWAY_BASE, getToken } from './api'
 
 function fromOrders(orders) {
   return asList(orders).map((order) => order.shipment).filter(Boolean)
@@ -35,8 +35,8 @@ function shipmentSocketUrl({ trackingNumber, userId }) {
   if (token) params.set('token', token)
   if (trackingNumber) params.set('trackingNumber', trackingNumber)
   if (userId) params.set('userId', String(userId))
-  const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws'
-  return `${protocol}://${window.location.host}/ws/shipments?${params.toString()}`
+  const wsBase = GATEWAY_BASE.replace(/^http/, 'ws')
+  return `${wsBase}/ws/shipments?${params.toString()}`
 }
 
 export function connectShipmentSocket({ trackingNumber, userId, onUpdate }) {

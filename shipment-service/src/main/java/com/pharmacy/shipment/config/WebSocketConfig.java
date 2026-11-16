@@ -22,6 +22,6 @@ public class WebSocketConfig implements WebSocketConfigurer {
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         registry.addHandler(handler, "/ws/shipments")
                 .addInterceptors(interceptor)
-                .setAllowedOriginPatterns("http://localhost:5173", "http://localhost:5174");
+                .setAllowedOriginPatterns("*");
     }
 }
