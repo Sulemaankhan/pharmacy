@@ -46,6 +46,16 @@ spring:
 app:
   jwt:
     secret: MedicineDrugstoreJwtSecretKeyMustBeAtLeast256BitsLongForHS256Algo
+  rate-limit:
+    enabled: true
+    default-policy:
+      capacity: 60
+      refill-tokens: 30
+      refill-period: 1s
+    auth-policy:
+      capacity: 10
+      refill-tokens: 10
+      refill-period: 1m
   services:
     customer: ${CUSTOMER_SERVICE_URL:http://localhost:8087}
     inventory: ${INVENTORY_SERVICE_URL:http://localhost:8088}
