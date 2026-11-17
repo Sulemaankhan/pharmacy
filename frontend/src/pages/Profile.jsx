@@ -27,7 +27,7 @@ function fromProfile(source, user) {
 }
 
 export default function Profile() {
-  const { user, profile, cartCount, wishCount, saveProfile, refreshProfile } = useStore()
+  const { user, profile, cartCount, wishCount, orders, saveProfile, refreshProfile } = useStore()
   const [form, setForm] = useState(() => fromProfile(profile, user))
   const [dirty, setDirty] = useState(false)
   const [error, setError] = useState('')
@@ -117,7 +117,7 @@ export default function Profile() {
   }
 
   const live = profile || {}
-  const orders = live.orderCount ?? 0
+  const orderTotal = live.orderCount ?? orders.length
   const carts = live.cartCount ?? cartCount
   const wishes = live.wishlistCount ?? wishCount
 
@@ -147,7 +147,7 @@ export default function Profile() {
           <p className="muted" style={{ marginTop: 12 }}>Member since {formatWhen(user.createdAt || live.createdAt)}</p>
           <div className="profile-stats">
             <Link to="/orders" className="profile-stat">
-              <b>{orders}</b>
+              <b>{orderTotal}</b>
               <span>Orders</span>
             </Link>
             <Link to="/cart" className="profile-stat">
@@ -162,9 +162,9 @@ export default function Profile() {
           <p style={{ marginTop: 14 }}>
             <Link className="link-btn" to="/lab-reports">Open lab reports</Link>
           </p>
-          {live.lastOrderNumber && (
+          {(live.lastOrderNumber || orders[0]?.orderNumber) && (
             <p style={{ marginTop: 14 }}>
-              Last order <Link className="link-btn" to={`/orders/${live.lastOrderNumber}`}>{live.lastOrderNumber}</Link>
+              Last order <Link className="link-btn" to={`/orders/${live.lastOrderNumber || orders[0]?.orderNumber}`}>{live.lastOrderNumber || orders[0]?.orderNumber}</Link>
             </p>
           )}
         </aside>

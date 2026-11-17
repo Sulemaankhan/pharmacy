@@ -57,17 +57,14 @@ export function connectShipmentSocket({ trackingNumber, userId, onUpdate }) {
         // ignore malformed frames
       }
     }
-    socket.onclose = () => {
-      if (!closed) retry = window.setTimeout(connect, 4000)
-    }
-    socket.onerror = () => {
-      try { socket.close() } catch { /* already closed */ }
+    socket.onclose = (event) => {
+      if (!closed && event.code !== 1000) retry = window.setTimeout(connect, 4000)
     }
   }
   connect()
   return () => {
     closed = true
     window.clearTimeout(retry)
-    if (socket && socket.readyState < 2) socket.close()
+    if (socket && socket.readyState < 2) socket.close(1000, 'done')
   }
 }

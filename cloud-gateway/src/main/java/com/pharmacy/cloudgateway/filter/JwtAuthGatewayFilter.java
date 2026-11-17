@@ -58,6 +58,9 @@ public class JwtAuthGatewayFilter implements org.springframework.cloud.gateway.f
             Claims claims = Jwts.parser().verifyWith(key).build().parseSignedClaims(token).getPayload();
             String email = claims.getSubject();
             log.info("Request Route from cloudgateway.... {} {} user={}", method, path, email);
+            if (isWebSocket(exchange, path)) {
+                return chain.filter(exchange);
+            }
             ServerWebExchange modified = exchange.mutate()
                     .request(request -> request.headers(headers -> {
                         if (email != null && !email.isBlank()) {
@@ -84,6 +87,11 @@ public class JwtAuthGatewayFilter implements org.springframework.cloud.gateway.f
         }
         return PUBLIC_METHODS.contains(method)
                 && (path.startsWith("/api/products") || path.startsWith("/api/categories"));
+    }
+
+    private static boolean isWebSocket(ServerWebExchange exchange, String path) {
+        String upgrade = exchange.getRequest().getHeaders().getUpgrade();
+        return "websocket".equalsIgnoreCase(upgrade) || (path != null && path.startsWith("/ws/"));
     }
 
     private static String bearer(ServerWebExchange exchange) {

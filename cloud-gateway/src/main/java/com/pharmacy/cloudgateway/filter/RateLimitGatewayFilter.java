@@ -134,6 +134,6 @@ public class RateLimitGatewayFilter implements org.springframework.cloud.gateway
 
     @Override
     public int getOrder() {
-        return -2;
+        return -3;
     }
 }

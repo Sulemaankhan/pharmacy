@@ -64,7 +64,7 @@ public class CorsConfig {
             headers.set(HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS,
                     requested == null || requested.isBlank() ? DEFAULT_ALLOW_HEADERS : requested);
             headers.set(HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS,
-                    "Content-Disposition, X-Request-Id, X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset, Retry-After");
+                    "Content-Disposition, X-Request-Id, X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset, X-Throttle-Limit, X-Throttle-Remaining, Retry-After");
             headers.set(HttpHeaders.ACCESS_CONTROL_MAX_AGE, "86400");
         } catch (UnsupportedOperationException ignored) {
             // Netty may freeze headers at commit; values were already written above.

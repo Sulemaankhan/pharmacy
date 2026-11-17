@@ -37,13 +37,34 @@ public class ProfileService {
 
     public UserProfileResponse get(User user, String bearerToken) {
         log.info("Profile get {}", RequestMdc.describe(user));
-        return toResponse(user, customers.profile(bearerToken));
+        try {
+            return toResponse(user, customers.profile(bearerToken));
+        } catch (RuntimeException ex) {
+            log.warn("Customer profile unavailable, using local user {}", RequestMdc.describe(user));
+            return toResponse(user, localProfile(user));
+        }
     }
 
     public UserProfileResponse update(User user, String bearerToken, ProfileUpdateRequest req) {
         CustomerProfile profile = customers.updateProfile(bearerToken, req);
         log.info("Profile updated userId={} email={}", profile.userId(), profile.email());
         return toResponse(user, profile);
+    }
+
+    private static CustomerProfile localProfile(User user) {
+        return new CustomerProfile(
+                user.getId(),
+                user.getName(),
+                user.getEmail(),
+                user.getRole(),
+                user.getPhone(),
+                user.getAddress(),
+                user.getCity(),
+                user.getState(),
+                user.getPincode(),
+                user.getCreatedAt(),
+                user.getUpdatedAt(),
+                null);
     }
 
     private UserProfileResponse toResponse(User localUser, CustomerProfile profile) {
