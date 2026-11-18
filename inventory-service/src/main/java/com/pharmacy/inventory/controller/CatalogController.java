@@ -4,6 +4,8 @@ import com.pharmacy.inventory.entity.Category;
 import com.pharmacy.inventory.entity.Product;
 import com.pharmacy.inventory.repository.CategoryRepository;
 import com.pharmacy.inventory.repository.ProductRepository;
+import com.pharmacy.inventory.service.CatalogService;
+import com.pharmacy.inventory.service.ProductListQuery;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -18,10 +20,12 @@ import java.util.List;
 public class CatalogController {
     private final ProductRepository products;
     private final CategoryRepository categories;
+    private final CatalogService catalog;
 
-    public CatalogController(ProductRepository products, CategoryRepository categories) {
+    public CatalogController(ProductRepository products, CategoryRepository categories, CatalogService catalog) {
         this.products = products;
         this.categories = categories;
+        this.catalog = catalog;
     }
 
     @GetMapping("/categories")
@@ -36,25 +40,7 @@ public class CatalogController {
             @RequestParam(required = false) Boolean deals,
             @RequestParam(required = false) Boolean featured,
             @RequestParam(required = false) String labPanel) {
-        if (labPanel != null && !labPanel.isBlank()) {
-            if ("ALL".equalsIgnoreCase(labPanel.trim())) {
-                return products.findByLabPanelIsNotNull();
-            }
-            return products.findByLabPanel(labPanel.trim().toUpperCase());
-        }
-        if (q != null && !q.isBlank()) {
-            return products.search(q.trim());
-        }
-        if (Boolean.TRUE.equals(deals)) {
-            return products.findByDealOfTheDayTrue();
-        }
-        if (Boolean.TRUE.equals(featured)) {
-            return products.findByFeaturedTrue();
-        }
-        if (categoryId != null) {
-            return products.findByCategoryId(categoryId);
-        }
-        return products.findAll();
+        return catalog.products(ProductListQuery.from(categoryId, q, deals, featured, labPanel));
     }
 
     @GetMapping("/products/{id}")
