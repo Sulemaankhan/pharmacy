@@ -1,9 +1,10 @@
 # Pharmacy
 
-Medicine Drugstore is split into eight backend apps plus the React storefront.
+Medicine Drugstore is split into nine backend apps plus the React storefront.
 
 | App | Path | Port | Role | Communication |
 |---|---|---|---|---|
+| Eureka service | `eureka-service` | 8761 | Service registry. Every backend app registers here, and the cloud gateway resolves routes from it | HTTP |
 | Cloud Gateway | `cloud-gateway` | 8095 | Reactive Spring Cloud Gateway + JWT security; single client entry point | Non-blocking HTTP + WebSocket proxy |
 | Pharmacy Service | `pharmacy-service` | 8082 | BFF, cart, orders, checkout saga | HTTP + Kafka orchestrator |
 | Customer service | `customer-service` | 8087 | Register, login, profile, password reset | Sync HTTP |
@@ -81,9 +82,10 @@ docker compose up -d
 
 2. Start MySQL with database `pharmacy`.
 
-3. Start the Spring Boot apps (separate terminals):
+3. Start the Spring Boot apps (separate terminals). Start Eureka first, then the other services, and `cloud-gateway` last:
 
 ```bash
+cd eureka-service && mvn spring-boot:run
 cd customer-service && mvn spring-boot:run
 cd inventory-service && mvn spring-boot:run
 cd pharmacy-service && mvn spring-boot:run
@@ -94,7 +96,7 @@ cd shipment-service && mvn spring-boot:run
 cd cloud-gateway && mvn spring-boot:run
 ```
 
-Start `cloud-gateway` last so it can reach the downstream services. Start `customer-service`, `inventory-service`, and `gateway-service` before using the storefront. Profile → Account shows available balance and every CREDIT/DEBIT row.
+Registered apps are listed at http://localhost:8761. The cloud gateway sends `/api/**` and the WebSocket routes to the service name in Eureka, so a service must be registered before the gateway can reach it. Start `customer-service`, `inventory-service`, and `gateway-service` before using the storefront. Profile → Account shows available balance and every CREDIT/DEBIT row.
 
 4. Start the storefront:
 

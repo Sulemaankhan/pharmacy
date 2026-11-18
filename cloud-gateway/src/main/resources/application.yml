@@ -23,29 +23,29 @@ spring:
         - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin Access-Control-Allow-Methods Access-Control-Allow-Headers Access-Control-Expose-Headers Access-Control-Max-Age, RETAIN_FIRST
       routes:
         - id: customer-auth
-          uri: ${app.services.customer}
+          uri: lb://customer-service
           predicates:
             - Path=/api/auth/**
         - id: customer-profile
-          uri: ${app.services.customer}
+          uri: lb://customer-service
           predicates:
             - Path=/api/profile,/api/profile/**
         - id: inventory-catalog
-          uri: ${app.services.inventory}
+          uri: lb://inventory-service
           predicates:
             - Path=/api/products/**,/api/categories/**
         - id: pharmacy-api
-          uri: ${app.services.pharmacy}
+          uri: lb://pharmacy-service
           predicates:
             - Path=/api/**
           filters:
             - Retry=3
         - id: shipment-websocket
-          uri: ${app.services.shipment}
+          uri: lb://shipment-service
           predicates:
             - Path=/ws/shipments,/ws/shipments/**
         - id: accounts-websocket
-          uri: ${app.services.accounts}
+          uri: lb://gateway-service
           predicates:
             - Path=/ws/accounts,/ws/accounts/**
 
@@ -67,12 +67,18 @@ app:
     max-concurrent-global: 200
     max-concurrent-per-client: 16
     max-wait: 300ms
-  services:
-    customer: ${CUSTOMER_SERVICE_URL:http://localhost:8087}
-    inventory: ${INVENTORY_SERVICE_URL:http://localhost:8088}
-    pharmacy: ${PHARMACY_SERVICE_URL:http://localhost:8082}
-    shipment: ${SHIPMENT_SERVICE_URL:http://localhost:8085}
-    accounts: ${GATEWAY_SERVICE_URL:http://localhost:8086}
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URL:http://localhost:8761/eureka/}
+    registry-fetch-interval-seconds: 5
+  instance:
+    hostname: localhost
+    prefer-ip-address: false
+    instance-id: ${spring.application.name}:${server.port}
+    lease-renewal-interval-in-seconds: 10
+    lease-expiration-duration-in-seconds: 30
 
 info:
   app:
