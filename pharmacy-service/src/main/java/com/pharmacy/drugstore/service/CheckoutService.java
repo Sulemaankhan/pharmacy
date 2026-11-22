@@ -167,11 +167,6 @@ public class CheckoutService {
         });
     }
 
-    public PaymentResponse pendingResponse(CustomerOrder order, String message) {
-        PaymentTransaction txn = order.getPayment();
-        return toResponse(true, order, txn, message, "PENDING", null);
-    }
-
     public void recordCapture(Long userId, String orderNumber, PaymentResult result) {
         tx.execute(status -> {
             CustomerOrder order = orders.findByOrderNumberAndUserId(orderNumber, userId)

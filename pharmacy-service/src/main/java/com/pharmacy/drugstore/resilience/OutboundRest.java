@@ -1,6 +1,5 @@
 package com.pharmacy.drugstore.resilience;
 
-import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 import java.time.Duration;
@@ -29,9 +28,5 @@ public final class OutboundRest {
             return current.getClass().getSimpleName();
         }
         return current.getClass().getSimpleName() + ": " + message;
-    }
-
-    public static boolean open(Throwable ex) {
-        return ex instanceof CallNotPermittedException;
     }
 }

@@ -53,19 +53,6 @@ public final class NotificationCommands {
                 null);
     }
 
-    public static NotificationCommand passwordReset(User user, String resetUrl) {
-        List<String> to = user != null && user.getEmail() != null && !user.getEmail().isBlank()
-                ? List.of(user.getEmail().trim()) : List.of();
-        return new NotificationCommand(
-                "PASSWORD_RESET",
-                user == null ? null : user.getName(),
-                user == null ? null : user.getEmail(),
-                to,
-                null, null, null, null, null, null, null, null, null, null, List.of(),
-                null, null, null, null, null, null,
-                resetUrl);
-    }
-
     public static List<String> recipients(User user, CustomerOrder order) {
         LinkedHashSet<String> to = new LinkedHashSet<>();
         if (user != null && user.getEmail() != null && !user.getEmail().isBlank()) {
