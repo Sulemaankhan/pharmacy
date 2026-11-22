@@ -96,7 +96,7 @@ cd shipment-service && mvn spring-boot:run
 cd cloud-gateway && mvn spring-boot:run
 ```
 
-Registered apps are listed at http://localhost:8761. The cloud gateway sends `/api/**` and the WebSocket routes to the service name in Eureka, so a service must be registered before the gateway can reach it. Start `customer-service`, `inventory-service`, and `gateway-service` before using the storefront. Profile → Account shows available balance and every CREDIT/DEBIT row.
+Registered apps are listed at http://localhost:8761. The cloud gateway sends `/api/**` and the WebSocket routes to the service name in Eureka, choosing the instance with the most remaining capacity. Each service advertises `max-load`; once every instance is at that limit, the gateway stops sending it more work. A service must be registered before the gateway can reach it. Start `customer-service`, `inventory-service`, and `gateway-service` before using the storefront. Profile → Account shows available balance and every CREDIT/DEBIT row.
 
 4. Start the storefront:
 

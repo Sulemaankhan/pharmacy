@@ -9,9 +9,13 @@ public final class OutboundRest {
     private OutboundRest() {}
 
     public static RestClient client(String baseUrl) {
+        return client(baseUrl, Duration.ofSeconds(15));
+    }
+
+    public static RestClient client(String baseUrl, Duration readTimeout) {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(Duration.ofSeconds(2));
-        factory.setReadTimeout(Duration.ofSeconds(5));
+        factory.setReadTimeout(readTimeout);
         return RestClient.builder().baseUrl(baseUrl).requestFactory(factory).build();
     }
 

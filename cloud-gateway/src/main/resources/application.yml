@@ -48,6 +48,9 @@ spring:
           uri: lb://gateway-service
           predicates:
             - Path=/ws/accounts,/ws/accounts/**
+    loadbalancer:
+      cache:
+        ttl: 5s
 
 app:
   jwt:
@@ -67,6 +70,16 @@ app:
     max-concurrent-global: 200
     max-concurrent-per-client: 16
     max-wait: 300ms
+  load-balancer:
+    default-max-load: 50
+    services:
+      customer-service: 80
+      inventory-service: 120
+      pharmacy-service: 40
+      payment-service: 30
+      notification-service: 20
+      shipment-service: 50
+      gateway-service: 40
 
 eureka:
   client:

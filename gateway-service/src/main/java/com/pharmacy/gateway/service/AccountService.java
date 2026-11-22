@@ -10,15 +10,20 @@ import com.pharmacy.gateway.repository.AccountTransactionRepository;
 import com.pharmacy.gateway.repository.CustomerAccountRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import jakarta.annotation.PreDestroy;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 @Service
 public class AccountService {
@@ -32,6 +37,11 @@ public class AccountService {
     private final BigDecimal openingBalance;
     private final String pharmacyEmail;
     private final String pharmacyName;
+    private final ExecutorService broadcasts = Executors.newSingleThreadExecutor(task -> {
+        Thread thread = new Thread(task, "account-broadcast");
+        thread.setDaemon(true);
+        return thread;
+    });
 
     public AccountService(
             CustomerAccountRepository accounts,
@@ -48,15 +58,26 @@ public class AccountService {
         this.pharmacyName = pharmacyName == null || pharmacyName.isBlank() ? "Pharmacy Account" : pharmacyName;
     }
 
+    @PreDestroy
+    public void shutdownBroadcasts() {
+        broadcasts.shutdown();
+    }
+
     @Transactional
     public AccountSnapshot snapshot(String email, Long userId, String customerName) {
-        CustomerAccount account = requireAccount(email, userId, customerName);
+        String normalized = normalize(email);
+        if (pharmacyEmail.equals(normalized)) {
+            return pharmacySnapshot();
+        }
+        CustomerAccount account = accounts.findByEmailIgnoreCase(normalized)
+                .orElseGet(() -> lockOrOpen(email, userId, customerName));
         return toSnapshot(account, true);
     }
 
     @Transactional
     public AccountSnapshot pharmacySnapshot() {
-        return toSnapshot(requirePharmacy(), true);
+        CustomerAccount pharmacy = accounts.findByEmailIgnoreCase(pharmacyEmail).orElseGet(this::requirePharmacy);
+        return toSnapshot(pharmacy, true);
     }
 
     @Transactional(readOnly = true)
@@ -132,8 +153,8 @@ public class AccountService {
 
         CustomerAccount pharmacy = creditPharmacy(request, amount);
         String gatewayRef = "GW-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
-        hub.broadcast(toSnapshot(account, true));
-        hub.broadcast(toSnapshot(pharmacy, true));
+        publish(account);
+        publish(pharmacy);
         log.info("Account transferred email={} amount={} order={}",
                 account.getEmail(), amount, request.orderNumber());
         return DebitResponse.ok(gatewayRef, amount, remaining, amount, pharmacy.getAvailableBalance());
@@ -181,8 +202,8 @@ public class AccountService {
                 "Refund " + safe(request.orderNumber()) + " · order cancelled");
 
         CustomerAccount pharmacy = debitPharmacy(request, amount);
-        hub.broadcast(toSnapshot(customer, true));
-        hub.broadcast(toSnapshot(pharmacy, true));
+        publish(customer);
+        publish(pharmacy);
         String gatewayRef = "RF-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
         log.info("Account refunded email={} amount={} order={}",
                 customer.getEmail(), amount, request.orderNumber());
@@ -265,14 +286,6 @@ public class AccountService {
         transactions.save(row);
     }
 
-    private CustomerAccount requireAccount(String email, Long userId, String customerName) {
-        if (pharmacyEmail.equals(normalize(email))) {
-            return requirePharmacy();
-        }
-        return accounts.lockByEmail(normalize(email)).orElseGet(() -> open(
-                email, userId, customerName, CUSTOMER, openingBalance, "Opening balance"));
-    }
-
     private CustomerAccount lockOrOpen(String email, Long userId, String customerName) {
         return accounts.lockByEmail(normalize(email)).orElseGet(() -> {
             try {
@@ -319,8 +332,26 @@ public class AccountService {
             transactions.save(openingTxn);
         }
         log.info("Opened {} account email={}", type, account.getEmail());
-        hub.broadcast(toSnapshot(account, true));
+        publish(account);
         return account;
+    }
+
+    private void publish(CustomerAccount account) {
+        if (account == null || account.getId() == null) {
+            return;
+        }
+        Long id = account.getId();
+        Runnable task = () -> accounts.findById(id).ifPresent(loaded -> hub.broadcast(toSnapshot(loaded, true)));
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            broadcasts.execute(task);
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                broadcasts.execute(task);
+            }
+        });
     }
 
     private AccountSnapshot toSnapshot(CustomerAccount account, boolean includeTxns) {

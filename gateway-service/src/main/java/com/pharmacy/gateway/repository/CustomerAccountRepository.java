@@ -12,6 +12,6 @@ public interface CustomerAccountRepository extends JpaRepository<CustomerAccount
     Optional<CustomerAccount> findByEmailIgnoreCase(String email);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("SELECT a FROM CustomerAccount a WHERE LOWER(a.email) = LOWER(:email)")
+    @Query("SELECT a FROM CustomerAccount a WHERE a.email = :email")
     Optional<CustomerAccount> lockByEmail(@Param("email") String email);
 }

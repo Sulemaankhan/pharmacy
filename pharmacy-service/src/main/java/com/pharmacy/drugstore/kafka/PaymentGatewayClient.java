@@ -14,6 +14,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.server.ResponseStatusException;
+import java.time.Duration;
 
 @Component
 public class PaymentGatewayClient {
@@ -22,7 +23,7 @@ public class PaymentGatewayClient {
     private final RestClient rest;
 
     public PaymentGatewayClient(@Value("${app.gateway-service.base-url:http://localhost:8086}") String baseUrl) {
-        this.rest = OutboundRest.client(baseUrl);
+        this.rest = OutboundRest.client(baseUrl, Duration.ofSeconds(15));
     }
 
     @CircuitBreaker(name = "paymentGateway", fallbackMethod = "accountFallback")
