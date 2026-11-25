@@ -56,6 +56,22 @@ export function StoreProvider({ children }) {
     if (cartRes.status === 'rejected') throw cartRes.reason
   }
 
+  async function refreshCart(expectedUserId = getUser()?.userId) {
+    const uid = expectedUserId ?? getUser()?.userId
+    if (uid == null || !isTokenValid()) return
+    const data = await api('/api/cart')
+    if (!sameUserId(getUser()?.userId, uid)) return
+    setCart(ownedByCurrentUser(data, uid))
+  }
+
+  async function refreshWishlist(expectedUserId = getUser()?.userId) {
+    const uid = expectedUserId ?? getUser()?.userId
+    if (uid == null || !isTokenValid()) return
+    const data = await api('/api/wishlist')
+    if (!sameUserId(getUser()?.userId, uid)) return
+    setWishlist(ownedByCurrentUser(data, uid))
+  }
+
   function applyProfile(data) {
     if (!data) return
     setAuth({ ...data, token: data.token || getToken() })
@@ -159,7 +175,6 @@ export function StoreProvider({ children }) {
       setAuth(data)
       const next = getUser()
       setUser(next)
-      await refreshUserData(next?.userId).catch(() => {})
       clientLog('info', 'user.login.success', { userId: next?.userId, email: next?.email, name: next?.name, role: next?.role })
     },
     async register(payload) {
@@ -168,32 +183,63 @@ export function StoreProvider({ children }) {
       setAuth(data)
       const next = getUser()
       setUser(next)
-      await refreshUserData(next?.userId).catch(() => {})
       clientLog('info', 'user.register.success', { userId: next?.userId, email: next?.email, name: next?.name, role: next?.role })
     },
     logout() {
       const current = getUser()
       clientLog('info', 'user.logout', { userId: current?.userId, email: current?.email, name: current?.name })
       expireSession()
-      refreshCatalog().catch(() => {})
     },
     async addToCart(productId, quantity = 1) {
       if (!isTokenValid() || !getUser()?.userId) throw new Error('Please sign in to add items')
       clientLog('info', 'cart.add', { productId, quantity })
-      await api('/api/cart', { method: 'POST', body: JSON.stringify({ productId, quantity }) })
-      await refreshUserData(getUser()?.userId)
+      const product = products.find((p) => p.id === productId)
+      let snapshot
+      setCart((prev) => {
+        snapshot = prev
+        if (!product) return prev
+        const existing = prev.find((i) => i.product?.id === productId)
+        if (existing) {
+          return prev.map((i) => (i.product?.id === productId ? { ...i, quantity: (i.quantity || 0) + quantity } : i))
+        }
+        return [...prev, { id: `tmp-${productId}`, product, quantity, userId: getUser()?.userId }]
+      })
+      try {
+        const saved = await api('/api/cart', { method: 'POST', body: JSON.stringify({ productId, quantity }) })
+        setCart((prev) => {
+          const rest = prev.filter((i) => i.id !== saved?.id && i.product?.id !== productId && i.id !== `tmp-${productId}`)
+          const merged = saved?.product ? saved : { ...saved, product }
+          return [...rest, merged]
+        })
+      } catch (err) {
+        if (snapshot) setCart(snapshot)
+        throw err
+      }
     },
     async updateCart(id, quantity) {
       if (!isTokenValid() || !getUser()?.userId) throw new Error('Please sign in to update cart')
       clientLog('info', 'cart.update', { itemId: id, quantity })
-      await api(`/api/cart/${id}`, { method: 'PATCH', body: JSON.stringify({ productId: 0, quantity }) })
-      await refreshUserData(getUser()?.userId)
+      const saved = await api(`/api/cart/${id}`, { method: 'PATCH', body: JSON.stringify({ productId: 0, quantity }) })
+      if (quantity < 1) {
+        setCart((prev) => prev.filter((i) => i.id !== id))
+      } else if (saved) {
+        setCart((prev) => prev.map((i) => (i.id === id ? saved : i)))
+      }
     },
     async removeCart(id) {
       if (!isTokenValid() || !getUser()?.userId) throw new Error('Please sign in to update cart')
       clientLog('info', 'cart.remove', { itemId: id })
-      await api(`/api/cart/${id}`, { method: 'DELETE' })
-      await refreshUserData(getUser()?.userId)
+      let snapshot
+      setCart((prev) => {
+        snapshot = prev
+        return prev.filter((i) => i.id !== id)
+      })
+      try {
+        await api(`/api/cart/${id}`, { method: 'DELETE' })
+      } catch (err) {
+        if (snapshot) setCart(snapshot)
+        throw err
+      }
     },
     refreshUserData,
     refreshProfile,
@@ -203,7 +249,6 @@ export function StoreProvider({ children }) {
       clientLog('info', 'profile.save', { email: payload.email })
       const data = await api('/api/profile', { method: 'PATCH', body: JSON.stringify(payload) })
       applyProfile(data)
-      await refreshUserData(getUser()?.userId).catch(() => {})
       clientLog('info', 'profile.saved', { userId: data.userId, email: data.email })
       return data
     },
@@ -211,7 +256,7 @@ export function StoreProvider({ children }) {
       if (!isTokenValid() || !getUser()?.userId) throw new Error('Please sign in to use wishlist')
       clientLog('info', 'wishlist.toggle', { productId })
       await api(`/api/wishlist/${productId}`, { method: 'POST' })
-      await refreshUserData(getUser()?.userId)
+      await refreshWishlist(getUser()?.userId)
     }
   }), [user, profile, products, categories, cart, wishlist, orders, query, catalogError, loadingCatalog])
 

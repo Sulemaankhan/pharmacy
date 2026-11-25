@@ -1,6 +1,8 @@
 package com.pharmacy.inventory.service;
 
+import com.pharmacy.inventory.entity.Category;
 import com.pharmacy.inventory.entity.Product;
+import com.pharmacy.inventory.repository.CategoryRepository;
 import com.pharmacy.inventory.repository.ProductRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,11 +14,20 @@ import java.util.List;
 @Service
 public class CatalogService {
     public static final String PRODUCT_LIST_CACHE = "productList";
+    public static final String CATEGORY_LIST_CACHE = "categoryList";
     private static final Logger log = LoggerFactory.getLogger(CatalogService.class);
     private final ProductRepository products;
+    private final CategoryRepository categories;
 
-    public CatalogService(ProductRepository products) {
+    public CatalogService(ProductRepository products, CategoryRepository categories) {
         this.products = products;
+        this.categories = categories;
+    }
+
+    @Cacheable(cacheNames = CATEGORY_LIST_CACHE, sync = true)
+    @Transactional(readOnly = true)
+    public List<Category> categories() {
+        return List.copyOf(categories.findAll());
     }
 
     @Cacheable(cacheNames = PRODUCT_LIST_CACHE, key = "#query", sync = true)

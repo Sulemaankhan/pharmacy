@@ -57,6 +57,7 @@ public class KafkaConfig {
         factory.setConsumerFactory(consumerFactory);
         factory.setReplyTemplate(kafkaTemplate);
         factory.setCommonErrorHandler(kafkaErrorHandler);
+        factory.setConcurrency(6);
         return factory;
     }
 }

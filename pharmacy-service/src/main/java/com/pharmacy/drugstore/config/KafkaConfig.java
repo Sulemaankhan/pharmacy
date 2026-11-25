@@ -122,6 +122,7 @@ public class KafkaConfig {
         factory.setCommonErrorHandler(kafkaErrorHandler);
         factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.RECORD);
         factory.getContainerProperties().setMissingTopicsFatal(false);
+        factory.setConcurrency(6);
         return factory;
     }
 

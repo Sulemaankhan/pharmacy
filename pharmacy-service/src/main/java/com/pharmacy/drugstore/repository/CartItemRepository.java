@@ -9,10 +9,10 @@ import java.util.List;
 import java.util.Optional;
 
 public interface CartItemRepository extends JpaRepository<CartItem, Long> {
-    @Query("SELECT c FROM CartItem c JOIN FETCH c.product JOIN FETCH c.user WHERE c.user.id = :userId")
+    @Query("SELECT c FROM CartItem c JOIN FETCH c.product p LEFT JOIN FETCH p.category JOIN FETCH c.user WHERE c.user.id = :userId")
     List<CartItem> findByUserId(@Param("userId") Long userId);
 
-    @Query("SELECT c FROM CartItem c JOIN FETCH c.product JOIN FETCH c.user WHERE c.user.id = :userId AND c.product.id = :productId")
+    @Query("SELECT c FROM CartItem c JOIN FETCH c.product p LEFT JOIN FETCH p.category JOIN FETCH c.user WHERE c.user.id = :userId AND c.product.id = :productId")
     Optional<CartItem> findByUserIdAndProductId(@Param("userId") Long userId, @Param("productId") Long productId);
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)

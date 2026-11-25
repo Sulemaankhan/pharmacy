@@ -2,7 +2,6 @@ package com.pharmacy.inventory.controller;
 
 import com.pharmacy.inventory.entity.Category;
 import com.pharmacy.inventory.entity.Product;
-import com.pharmacy.inventory.repository.CategoryRepository;
 import com.pharmacy.inventory.repository.ProductRepository;
 import com.pharmacy.inventory.service.CatalogService;
 import com.pharmacy.inventory.service.ProductListQuery;
@@ -19,18 +18,16 @@ import java.util.List;
 @RequestMapping("/api")
 public class CatalogController {
     private final ProductRepository products;
-    private final CategoryRepository categories;
     private final CatalogService catalog;
 
-    public CatalogController(ProductRepository products, CategoryRepository categories, CatalogService catalog) {
+    public CatalogController(ProductRepository products, CatalogService catalog) {
         this.products = products;
-        this.categories = categories;
         this.catalog = catalog;
     }
 
     @GetMapping("/categories")
     public List<Category> categories() {
-        return categories.findAll();
+        return catalog.categories();
     }
 
     @GetMapping("/products")

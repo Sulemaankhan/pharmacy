@@ -23,7 +23,7 @@ public class PaymentGatewayClient {
     private final RestClient rest;
 
     public PaymentGatewayClient(@Value("${app.gateway-service.base-url:http://localhost:8086}") String baseUrl) {
-        this.rest = OutboundRest.client(baseUrl, Duration.ofSeconds(15));
+        this.rest = OutboundRest.client(baseUrl, Duration.ofSeconds(8));
     }
 
     @CircuitBreaker(name = "paymentGateway", fallbackMethod = "accountFallback")

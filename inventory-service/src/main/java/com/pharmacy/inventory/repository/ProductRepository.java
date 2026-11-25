@@ -1,19 +1,35 @@
 package com.pharmacy.inventory.repository;
 
 import com.pharmacy.inventory.entity.Product;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import java.util.List;
+import java.util.Optional;
 
 public interface ProductRepository extends JpaRepository<Product, Long> {
+    @EntityGraph(attributePaths = "category")
+    @Override
+    List<Product> findAll();
+
+    @EntityGraph(attributePaths = "category")
+    @Override
+    Optional<Product> findById(Long id);
+
+    @EntityGraph(attributePaths = "category")
     List<Product> findByDealOfTheDayTrue();
+    @EntityGraph(attributePaths = "category")
     List<Product> findByFeaturedTrue();
+    @EntityGraph(attributePaths = "category")
     List<Product> findByCategoryId(Long categoryId);
+    @EntityGraph(attributePaths = "category")
     List<Product> findByLabPanelIsNotNull();
+    @EntityGraph(attributePaths = "category")
     List<Product> findByLabPanel(String labPanel);
 
+    @EntityGraph(attributePaths = "category")
     @Query("SELECT p FROM Product p WHERE LOWER(p.name) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(p.brand) LIKE LOWER(CONCAT('%', :q, '%'))")
     List<Product> search(@Param("q") String q);
 

@@ -11,12 +11,14 @@ import java.util.stream.Collectors;
 @Component
 public class InstanceLoadTracker {
     private final ConcurrentHashMap<String, AtomicInteger> active = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, Object> serviceLocks = new ConcurrentHashMap<>();
 
     public ServiceInstance tryAcquire(String serviceId, List<ServiceInstance> instances, LoadBalancerProperties properties) {
         if (instances == null || instances.isEmpty()) {
             return null;
         }
-        synchronized (this) {
+        Object lock = serviceLocks.computeIfAbsent(serviceId, ignored -> new Object());
+        synchronized (lock) {
             forgetIdleInstances(serviceId, instances);
             ServiceInstance best = null;
             int bestRemaining = 0;

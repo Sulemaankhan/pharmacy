@@ -33,10 +33,7 @@ public class StoreService {
     @Transactional(readOnly = true)
     public List<CartItem> getCart(User user) {
         List<CartItem> items = cartItems.findByUserId(user.getId());
-        log.info("Cart list {} items={} productIds={}",
-                RequestMdc.describe(user),
-                items.size(),
-                items.stream().map(i -> i.getProduct().getId()).toList());
+        log.debug("Cart list {} items={}", RequestMdc.describe(user), items.size());
         return items;
     }
 

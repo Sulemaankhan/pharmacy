@@ -11,6 +11,7 @@ import com.pharmacy.customer.entity.User;
 import com.pharmacy.customer.kafka.NotificationPublisher;
 import com.pharmacy.customer.repository.PasswordResetTokenRepository;
 import com.pharmacy.customer.repository.UserRepository;
+import com.pharmacy.customer.security.CurrentUserHolder;
 import com.pharmacy.customer.security.JwtService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -135,6 +136,10 @@ public class AuthService {
     }
 
     public User requireUser(String email) {
+        User cached = CurrentUserHolder.get();
+        if (cached != null && (email == null || email.equalsIgnoreCase(cached.getEmail()))) {
+            return cached;
+        }
         return users.findByEmail(email)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found"));
     }

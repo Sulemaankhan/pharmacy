@@ -21,8 +21,8 @@ spring:
           x-forwarded:
             enabled: false
           httpclient:
-            connect-timeout: 5000
-            response-timeout: 90s
+            connect-timeout: 3000
+            response-timeout: 35s
             websocket:
               max-frame-payload-length: 65536
           default-filters:
@@ -81,7 +81,7 @@ app:
     services:
       customer-service: 80
       inventory-service: 120
-      pharmacy-service: 40
+      pharmacy-service: 120
       payment-service: 30
       notification-service: 20
       shipment-service: 50

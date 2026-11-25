@@ -11,10 +11,12 @@ import java.util.UUID;
 public class OutboxService {
     private final OutboxEventRepository outbox;
     private final ObjectMapper mapper;
+    private final OutboxPublisher publisher;
 
-    public OutboxService(OutboxEventRepository outbox, ObjectMapper mapper) {
+    public OutboxService(OutboxEventRepository outbox, ObjectMapper mapper, OutboxPublisher publisher) {
         this.outbox = outbox;
         this.mapper = mapper;
+        this.publisher = publisher;
     }
 
     @Transactional
@@ -38,6 +40,7 @@ public class OutboxService {
             row.setPayload(mapper.writeValueAsString(payload));
             row.setStatus("PENDING");
             outbox.save(row);
+            publisher.publishAfterCommit();
         } catch (JsonProcessingException ex) {
             throw new IllegalStateException("Could not serialize shipment outbox payload", ex);
         }
