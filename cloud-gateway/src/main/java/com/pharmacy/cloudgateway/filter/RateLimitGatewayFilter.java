@@ -3,12 +3,9 @@ package com.pharmacy.cloudgateway.filter;
 import com.pharmacy.cloudgateway.ratelimit.RateLimitProperties;
 import com.pharmacy.cloudgateway.ratelimit.TokenBucket;
 import com.pharmacy.cloudgateway.ratelimit.TokenBucketRegistry;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.security.Keys;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.Ordered;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.http.HttpHeaders;
@@ -19,7 +16,6 @@ import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
-import javax.crypto.SecretKey;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 
@@ -29,17 +25,14 @@ public class RateLimitGatewayFilter implements org.springframework.cloud.gateway
     private final RateLimitProperties properties;
     private final TokenBucketRegistry registry;
     private final MeterRegistry meters;
-    private final SecretKey jwtKey;
 
     public RateLimitGatewayFilter(
             RateLimitProperties properties,
             TokenBucketRegistry registry,
-            MeterRegistry meters,
-            @Value("${app.jwt.secret}") String jwtSecret) {
+            MeterRegistry meters) {
         this.properties = properties;
         this.registry = registry;
         this.meters = meters;
-        this.jwtKey = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
     }
 
     @Override
@@ -82,19 +75,9 @@ public class RateLimitGatewayFilter implements org.springframework.cloud.gateway
         return "ip:" + clientIp(request);
     }
 
-    private String jwtSubject(ServerHttpRequest request) {
-        String header = request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
-        if (header == null || !header.startsWith("Bearer ")) {
-            return null;
-        }
-        try {
-            return Jwts.parser().verifyWith(jwtKey).build()
-                    .parseSignedClaims(header.substring(7).trim())
-                    .getPayload()
-                    .getSubject();
-        } catch (Exception ex) {
-            return null;
-        }
+    private static String jwtSubject(ServerHttpRequest request) {
+        String email = request.getHeaders().getFirst("X-User-Email");
+        return email == null || email.isBlank() ? null : email;
     }
 
     private static String clientIp(ServerHttpRequest request) {

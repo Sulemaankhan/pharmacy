@@ -25,19 +25,16 @@ public class StockService {
     private final ProductRepository products;
     private final StockReservationRepository reservations;
     private final OutboxService outbox;
-    private final ProductListCache productListCache;
     private final String inventoryEvents;
 
     public StockService(
             ProductRepository products,
             StockReservationRepository reservations,
             OutboxService outbox,
-            ProductListCache productListCache,
             @Value("${app.kafka.topics.inventory-events}") String inventoryEvents) {
         this.products = products;
         this.reservations = reservations;
         this.outbox = outbox;
-        this.productListCache = productListCache;
         this.inventoryEvents = inventoryEvents;
     }
 
@@ -105,7 +102,6 @@ public class StockService {
                 .map(e -> e.getKey() + ":" + e.getValue())
                 .collect(Collectors.joining(",")));
         reservations.save(reservation);
-        productListCache.evictAfterCommit();
         log.info("Stock reserved orderNumber={} items={}", command.orderNumber(), qty);
         return StockResult.ok(command, "Stock reserved");
     }
@@ -122,7 +118,6 @@ public class StockService {
         restore(qty.keySet().stream().sorted().toList(), qty);
         reservation.setStatus("RELEASED");
         reservations.save(reservation);
-        productListCache.evictAfterCommit();
         log.info("Stock released orderNumber={}", command.orderNumber());
         return StockResult.ok(command, "Stock released");
     }

@@ -38,32 +38,37 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
-        String header = request.getHeader(HttpHeaders.AUTHORIZATION);
-        if (header != null && header.startsWith("Bearer ")) {
-            try {
-                String email = jwtService.extractEmail(header.substring(7));
-                User user = userRepository.findByEmail(email).orElse(null);
-                if (user != null) {
-                    RequestMdc.setUser(user);
-                    var auth = new UsernamePasswordAuthenticationToken(
-                            user.getEmail(),
-                            null,
-                            List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole())));
-                    SecurityContextHolder.getContext().setAuthentication(auth);
-                    log.info("JWT accepted {}", RequestMdc.describe(user));
-                } else {
+        try {
+            String header = request.getHeader(HttpHeaders.AUTHORIZATION);
+            if (header != null && header.startsWith("Bearer ")) {
+                try {
+                    String email = jwtService.extractEmail(header.substring(7));
+                    User user = userRepository.findByEmail(email).orElse(null);
+                    if (user != null) {
+                        CurrentUserHolder.set(user);
+                        RequestMdc.setUser(user);
+                        var auth = new UsernamePasswordAuthenticationToken(
+                                user.getEmail(),
+                                null,
+                                List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole())));
+                        SecurityContextHolder.getContext().setAuthentication(auth);
+                        log.debug("JWT accepted {}", RequestMdc.describe(user));
+                    } else {
+                        RequestMdc.setAnonymous();
+                        log.warn("JWT email={} did not match a user path={}", email, request.getRequestURI());
+                    }
+                } catch (Exception ex) {
                     RequestMdc.setAnonymous();
-                    log.warn("JWT email={} did not match a user path={}", email, request.getRequestURI());
+                    SecurityContextHolder.clearContext();
+                    log.warn("JWT rejected path={} reason={}", request.getRequestURI(), ex.getClass().getSimpleName());
                 }
-            } catch (Exception ex) {
+            } else {
                 RequestMdc.setAnonymous();
-                SecurityContextHolder.clearContext();
-                log.warn("JWT rejected path={} reason={}", request.getRequestURI(), ex.getClass().getSimpleName());
+                log.debug("No bearer token path={}", request.getRequestURI());
             }
-        } else {
-            RequestMdc.setAnonymous();
-            log.debug("No bearer token path={}", request.getRequestURI());
+            chain.doFilter(request, response);
+        } finally {
+            CurrentUserHolder.clear();
         }
-        chain.doFilter(request, response);
     }
 }

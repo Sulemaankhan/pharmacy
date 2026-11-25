@@ -112,6 +112,6 @@ public class JwtAuthGatewayFilter implements org.springframework.cloud.gateway.f
 
     @Override
     public int getOrder() {
-        return -1;
+        return -4;
     }
 }

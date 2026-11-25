@@ -42,12 +42,11 @@ export default function Profile() {
 
   useEffect(() => {
     if (!user?.userId) return undefined
-    fetchAccount()
-      .then(setAccount)
-      .catch((e) => setError(e.message))
-    fetchPharmacyAccount()
-      .then(setPharmacy)
-      .catch(() => {})
+    Promise.allSettled([fetchAccount(), fetchPharmacyAccount()]).then(([accountRes, pharmacyRes]) => {
+      if (accountRes.status === 'fulfilled') setAccount(accountRes.value)
+      else setError(accountRes.reason?.message || 'Could not load account')
+      if (pharmacyRes.status === 'fulfilled') setPharmacy(pharmacyRes.value)
+    })
     return connectAccountSocket({
       userId: user.userId,
       onUpdate: (update) => {

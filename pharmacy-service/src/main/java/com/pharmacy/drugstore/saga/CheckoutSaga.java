@@ -5,12 +5,16 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import java.time.Instant;
 
 @Entity
-@Table(name = "checkout_sagas")
+@Table(name = "checkout_sagas", indexes = {
+        @Index(name = "idx_sagas_status_updated", columnList = "status, updated_at"),
+        @Index(name = "idx_sagas_status_step", columnList = "status, step")
+})
 public class CheckoutSaga {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

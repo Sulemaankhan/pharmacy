@@ -77,7 +77,7 @@ public class CheckoutService {
         this.notifications = notifications;
         this.saga = saga;
         this.tx = new TransactionTemplate(transactionManager);
-        this.tx.setIsolationLevel(TransactionDefinition.ISOLATION_REPEATABLE_READ);
+        this.tx.setIsolationLevel(TransactionDefinition.ISOLATION_READ_COMMITTED);
         this.tx.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRED);
     }
 

@@ -6,48 +6,54 @@ spring:
     name: cloud-gateway
   main:
     web-application-type: reactive
-  codec:
-    max-in-memory-size: 16MB
+  http:
+    codecs:
+      preferred-json-mapper: jackson2
+      max-in-memory-size: 16MB
+    converters:
+      preferred-json-mapper: jackson2
   cloud:
     gateway:
-      forwarded:
-        enabled: false
-      x-forwarded:
-        enabled: false
-      httpclient:
-        connect-timeout: 5000
-        response-timeout: 90s
-        websocket:
-          max-frame-payload-length: 65536
-      default-filters:
-        - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin Access-Control-Allow-Methods Access-Control-Allow-Headers Access-Control-Expose-Headers Access-Control-Max-Age, RETAIN_FIRST
-      routes:
-        - id: customer-auth
-          uri: lb://customer-service
-          predicates:
-            - Path=/api/auth/**
-        - id: customer-profile
-          uri: lb://customer-service
-          predicates:
-            - Path=/api/profile,/api/profile/**
-        - id: inventory-catalog
-          uri: lb://inventory-service
-          predicates:
-            - Path=/api/products/**,/api/categories/**
-        - id: pharmacy-api
-          uri: lb://pharmacy-service
-          predicates:
-            - Path=/api/**
-          filters:
-            - Retry=3
-        - id: shipment-websocket
-          uri: lb://shipment-service
-          predicates:
-            - Path=/ws/shipments,/ws/shipments/**
-        - id: accounts-websocket
-          uri: lb://gateway-service
-          predicates:
-            - Path=/ws/accounts,/ws/accounts/**
+      server:
+        webflux:
+          forwarded:
+            enabled: false
+          x-forwarded:
+            enabled: false
+          httpclient:
+            connect-timeout: 3000
+            response-timeout: 35s
+            websocket:
+              max-frame-payload-length: 65536
+          default-filters:
+            - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin Access-Control-Allow-Methods Access-Control-Allow-Headers Access-Control-Expose-Headers Access-Control-Max-Age, RETAIN_FIRST
+          routes:
+            - id: customer-auth
+              uri: lb://customer-service
+              predicates:
+                - Path=/api/auth/**
+            - id: customer-profile
+              uri: lb://customer-service
+              predicates:
+                - Path=/api/profile,/api/profile/**
+            - id: inventory-catalog
+              uri: lb://inventory-service
+              predicates:
+                - Path=/api/products/**,/api/categories/**
+            - id: pharmacy-api
+              uri: lb://pharmacy-service
+              predicates:
+                - Path=/api/**
+              filters:
+                - Retry=3
+            - id: shipment-websocket
+              uri: lb://shipment-service
+              predicates:
+                - Path=/ws/shipments,/ws/shipments/**
+            - id: accounts-websocket
+              uri: lb://gateway-service
+              predicates:
+                - Path=/ws/accounts,/ws/accounts/**
     loadbalancer:
       cache:
         ttl: 5s
@@ -75,7 +81,7 @@ app:
     services:
       customer-service: 80
       inventory-service: 120
-      pharmacy-service: 40
+      pharmacy-service: 120
       payment-service: 30
       notification-service: 20
       shipment-service: 50

@@ -8,6 +8,7 @@ import com.pharmacy.drugstore.dto.ResetPasswordRequest;
 import com.pharmacy.drugstore.entity.User;
 import com.pharmacy.drugstore.logging.RequestMdc;
 import com.pharmacy.drugstore.repository.UserRepository;
+import com.pharmacy.drugstore.security.CurrentUserHolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -62,6 +63,10 @@ public class AuthService {
     }
 
     public User requireUser(String email) {
+        User cached = CurrentUserHolder.get();
+        if (cached != null && (email == null || email.equalsIgnoreCase(cached.getEmail()))) {
+            return cached;
+        }
         return users.findByEmail(email)
                 .orElseThrow(() -> {
                     log.warn("Authenticated principal email={} not found", email);

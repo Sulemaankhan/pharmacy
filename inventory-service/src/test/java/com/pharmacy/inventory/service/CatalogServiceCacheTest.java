@@ -1,6 +1,7 @@
 package com.pharmacy.inventory.service;
 
 import com.pharmacy.inventory.config.CacheConfig;
+import com.pharmacy.inventory.repository.CategoryRepository;
 import com.pharmacy.inventory.repository.ProductRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -74,6 +75,11 @@ class CatalogServiceCacheTest {
         @Bean
         ProductRepository productRepository() {
             return mock(ProductRepository.class);
+        }
+
+        @Bean
+        CategoryRepository categoryRepository() {
+            return mock(CategoryRepository.class);
         }
     }
 }

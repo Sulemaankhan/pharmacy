@@ -110,7 +110,7 @@ export default function Checkout() {
           email: form.email,
         }))
       }
-      await refreshUserData()
+      refreshUserData().catch(() => {})
       if (result.success && result.orderNumber) {
         clientLog('info', 'checkout.success', {
           orderNumber: result.orderNumber,

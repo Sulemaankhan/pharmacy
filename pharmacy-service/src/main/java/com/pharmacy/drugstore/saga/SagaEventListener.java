@@ -32,7 +32,17 @@ public class SagaEventListener {
     @KafkaListener(
             topics = {
                     "${app.kafka.topics.inventory-events}",
-                    "${app.kafka.topics.payment-events}",
+                    "${app.kafka.topics.payment-events}"
+            },
+            groupId = "pharmacy-saga-orchestrator",
+            containerFactory = "sagaEventListenerFactory")
+    @Transactional
+    public void onCheckoutEvent(DomainEvent event) {
+        onEvent(event);
+    }
+
+    @KafkaListener(
+            topics = {
                     "${app.kafka.topics.order-events}",
                     "${app.kafka.topics.fulfilment-events}",
                     "${app.kafka.topics.shipment-events}"
@@ -40,7 +50,11 @@ public class SagaEventListener {
             groupId = "pharmacy-saga-orchestrator",
             containerFactory = "sagaEventListenerFactory")
     @Transactional
-    public void onEvent(DomainEvent event) {
+    public void onFulfilmentEvent(DomainEvent event) {
+        onEvent(event);
+    }
+
+    private void onEvent(DomainEvent event) {
         if (event == null || event.getEventType() == null || event.getOrderNumber() == null) {
             return;
         }

@@ -19,7 +19,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.LinkedHashMap;
@@ -34,6 +36,7 @@ public class PaymentProcessingService {
     private final PaymentIntentRepository intents;
     private final OutboxService outbox;
     private final ObjectMapper mapper;
+    private final TransactionTemplate tx;
     private final String paymentEvents;
 
     public PaymentProcessingService(
@@ -42,29 +45,48 @@ public class PaymentProcessingService {
             PaymentIntentRepository intents,
             OutboxService outbox,
             ObjectMapper mapper,
+            PlatformTransactionManager transactionManager,
             @Value("${app.kafka.topics.payment-events}") String paymentEvents) {
         this.strategies = strategies;
         this.gateway = gateway;
         this.intents = intents;
         this.outbox = outbox;
         this.mapper = mapper;
+        this.tx = new TransactionTemplate(transactionManager);
         this.paymentEvents = paymentEvents;
     }
 
-    @Transactional
     public PaymentResult handle(PaymentCommand command) {
         if (command == null) {
             return PaymentResult.fail(null, "Payment command was empty");
         }
         String action = command.action() == null || command.action().isBlank()
                 ? "CHARGE" : command.action().trim().toUpperCase();
+        Prepared prepared = tx.execute(status -> prepareIntent(command, action));
+        if (prepared == null || prepared.intent() == null) {
+            return PaymentResult.fail(command, "Payment command was empty");
+        }
+        PaymentIntent intent = prepared.intent();
+        if ("SUCCESS".equals(intent.getStatus()) || "FAILED".equals(intent.getStatus())) {
+            return republish(intent);
+        }
+        if (!prepared.created()) {
+            return reconcile(intent, command);
+        }
+        PaymentResult result = "REFUND".equals(action) ? refund(command) : charge(command);
+        Long intentId = intent.getId();
+        return tx.execute(status -> {
+            PaymentIntent current = intents.findById(intentId).orElse(intent);
+            persist(current, result, command);
+            return result;
+        });
+    }
+
+    private Prepared prepareIntent(PaymentCommand command, String action) {
         String key = key(command, action);
         PaymentIntent existing = intents.findByIdempotencyKey(key).orElse(null);
-        if (existing != null && ("SUCCESS".equals(existing.getStatus()) || "FAILED".equals(existing.getStatus()))) {
-            return republish(existing);
-        }
-        if (existing != null && ("PENDING".equals(existing.getStatus()) || "UNKNOWN".equals(existing.getStatus()))) {
-            return reconcile(existing, command);
+        if (existing != null) {
+            return new Prepared(existing, false);
         }
         PaymentIntent intent = new PaymentIntent();
         intent.setIdempotencyKey(key);
@@ -75,15 +97,13 @@ public class PaymentProcessingService {
         intent.setCommandJson(write(command));
         intent.setUpdatedAt(Instant.now());
         try {
-            intents.saveAndFlush(intent);
+            return new Prepared(intents.saveAndFlush(intent), true);
         } catch (DataIntegrityViolationException ex) {
-            PaymentIntent raced = intents.findByIdempotencyKey(key).orElseThrow();
-            return handle(commandFrom(raced, command));
+            return new Prepared(intents.findByIdempotencyKey(key).orElseThrow(), false);
         }
-        PaymentResult result = "REFUND".equals(action) ? refund(command) : charge(command);
-        persist(intent, result, command);
-        return result;
     }
+
+    private record Prepared(PaymentIntent intent, boolean created) {}
 
     @Transactional
     public PaymentResult failClosed(PaymentCommand command, String message) {

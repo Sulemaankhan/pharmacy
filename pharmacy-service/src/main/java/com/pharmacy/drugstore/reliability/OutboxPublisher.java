@@ -7,7 +7,10 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -18,19 +21,40 @@ public class OutboxPublisher {
     private final OutboxEventRepository outbox;
     private final KafkaTemplate<String, Object> kafka;
     private final ObjectMapper mapper;
+    private final TransactionTemplate tx;
 
     public OutboxPublisher(
             OutboxEventRepository outbox,
             @Qualifier("kafkaTemplate") KafkaTemplate<String, Object> kafka,
-            ObjectMapper mapper) {
+            ObjectMapper mapper,
+            PlatformTransactionManager transactionManager) {
         this.outbox = outbox;
         this.kafka = kafka;
         this.mapper = mapper;
+        this.tx = new TransactionTemplate(transactionManager);
     }
 
-    @Scheduled(fixedDelayString = "${app.outbox.poll-ms:400}")
-    @Transactional
+    public void publishAfterCommit() {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            flush();
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                flush();
+            }
+        });
+    }
+
+    @Scheduled(fixedDelayString = "${app.outbox.poll-ms:50}")
     public void flush() {
+        synchronized (this) {
+            tx.executeWithoutResult(status -> publishPending());
+        }
+    }
+
+    private void publishPending() {
         List<OutboxEvent> batch = outbox.findTop50ByStatusOrderByIdAsc("PENDING");
         for (OutboxEvent event : batch) {
             try {

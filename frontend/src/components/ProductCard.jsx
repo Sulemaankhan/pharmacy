@@ -11,13 +11,9 @@ export default function ProductCard({ product }) {
   const off = product.compareAtPrice ? Math.round((1 - Number(product.price) / Number(product.compareAtPrice)) * 100) : 0
   const wished = isWished(product.id)
 
-  async function add() {
-    try {
-      await addToCart(product.id, 1)
-      setMsg('Added to cart')
-    } catch (e) {
-      setMsg(e.message)
-    }
+  function add() {
+    setMsg('Added to cart')
+    addToCart(product.id, 1).catch((e) => setMsg(e.message))
   }
 
   return (

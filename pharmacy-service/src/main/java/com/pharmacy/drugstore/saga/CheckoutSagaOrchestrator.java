@@ -101,10 +101,10 @@ public class CheckoutSagaOrchestrator {
         log.info("Checkout saga start {} mode={}", RequestMdc.describe(user), mode);
         CustomerOrder order = tx.execute(status -> {
             CustomerOrder created = checkout.reserveStock(user, request, mode);
+            waits.register(created.getOrderNumber());
             start(user, created, request, mode);
             return created;
         });
-        waits.register(order.getOrderNumber());
         PaymentResponse response = waits.await(order.getOrderNumber(), CHECKOUT_WAIT);
         if (response != null) {
             return response;

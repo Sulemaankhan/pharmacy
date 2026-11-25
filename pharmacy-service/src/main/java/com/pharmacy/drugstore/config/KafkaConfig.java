@@ -7,7 +7,7 @@ import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.kafka.KafkaProperties;
+import org.springframework.boot.kafka.autoconfigure.KafkaProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
@@ -90,7 +90,7 @@ public class KafkaConfig {
 
     @Bean
     public ProducerFactory<String, Object> producerFactory(KafkaProperties properties) {
-        Map<String, Object> config = new HashMap<>(properties.buildProducerProperties(null));
+        Map<String, Object> config = new HashMap<>(properties.buildProducerProperties());
         config.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
         config.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
         config.put(ProducerConfig.ACKS_CONFIG, "all");
@@ -101,7 +101,7 @@ public class KafkaConfig {
 
     @Bean
     public ConsumerFactory<String, DomainEvent> domainEventConsumerFactory(KafkaProperties properties) {
-        Map<String, Object> config = new HashMap<>(properties.buildConsumerProperties(null));
+        Map<String, Object> config = new HashMap<>(properties.buildConsumerProperties());
         config.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
         config.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false);
         config.remove(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG);
@@ -122,6 +122,7 @@ public class KafkaConfig {
         factory.setCommonErrorHandler(kafkaErrorHandler);
         factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.RECORD);
         factory.getContainerProperties().setMissingTopicsFatal(false);
+        factory.setConcurrency(6);
         return factory;
     }
 

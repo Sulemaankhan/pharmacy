@@ -34,22 +34,27 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
-        String header = request.getHeader(HttpHeaders.AUTHORIZATION);
-        if (header != null && header.startsWith("Bearer ")) {
-            try {
-                String email = jwtService.extractEmail(header.substring(7));
-                User user = users.findByEmail(email).orElse(null);
-                if (user != null) {
-                    var auth = new UsernamePasswordAuthenticationToken(
-                            user.getEmail(),
-                            null,
-                            List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole())));
-                    SecurityContextHolder.getContext().setAuthentication(auth);
+        try {
+            String header = request.getHeader(HttpHeaders.AUTHORIZATION);
+            if (header != null && header.startsWith("Bearer ")) {
+                try {
+                    String email = jwtService.extractEmail(header.substring(7));
+                    User user = users.findByEmail(email).orElse(null);
+                    if (user != null) {
+                        CurrentUserHolder.set(user);
+                        var auth = new UsernamePasswordAuthenticationToken(
+                                user.getEmail(),
+                                null,
+                                List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole())));
+                        SecurityContextHolder.getContext().setAuthentication(auth);
+                    }
+                } catch (Exception ignored) {
+                    SecurityContextHolder.clearContext();
                 }
-            } catch (Exception ignored) {
-                SecurityContextHolder.clearContext();
             }
+            chain.doFilter(request, response);
+        } finally {
+            CurrentUserHolder.clear();
         }
-        chain.doFilter(request, response);
     }
 }
