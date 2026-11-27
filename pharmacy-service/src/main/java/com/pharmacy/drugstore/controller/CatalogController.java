@@ -1,5 +1,7 @@
 package com.pharmacy.drugstore.controller;
 
+
+import java.util.List;
 import com.pharmacy.drugstore.client.InventoryClient;
 import com.pharmacy.drugstore.entity.Category;
 import com.pharmacy.drugstore.entity.Product;
@@ -10,7 +12,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import java.util.List;
 
 @RestController
 @RequestMapping("/api")

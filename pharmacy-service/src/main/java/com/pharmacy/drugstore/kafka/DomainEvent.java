@@ -5,6 +5,8 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 
+
+
 public class DomainEvent {
     private String eventId;
     private String eventType;

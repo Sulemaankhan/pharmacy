@@ -1,5 +1,7 @@
 package com.pharmacy.inventory.service;
 
+
+import java.util.List;
 import com.pharmacy.inventory.entity.Category;
 import com.pharmacy.inventory.entity.Product;
 import com.pharmacy.inventory.repository.CategoryRepository;
@@ -9,7 +11,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import java.util.List;
 
 @Service
 public class CatalogService {

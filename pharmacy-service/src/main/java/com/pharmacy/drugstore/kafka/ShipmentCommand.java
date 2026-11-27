@@ -2,6 +2,8 @@ package com.pharmacy.drugstore.kafka;
 
 import java.time.Instant;
 
+
+
 public record ShipmentCommand(
         String type,
         Long userId,

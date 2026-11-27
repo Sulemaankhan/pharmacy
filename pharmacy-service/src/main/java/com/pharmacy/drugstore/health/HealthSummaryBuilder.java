@@ -5,6 +5,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+
+
 public final class HealthSummaryBuilder {
     private HealthSummaryBuilder() {}
 
@@ -37,7 +39,7 @@ public final class HealthSummaryBuilder {
             sb.append("No standard lab values were detected. The summary uses the most relevant retrieved passages. ");
         }
         if (!hits.isEmpty()) {
-            RagRetriever.Hit top = hits.get(0);
+            RagRetriever.Hit top = hits.getFirst();
             sb.append("Retrieved evidence (").append(RagRetriever.panelName(top.panel)).append("): ")
                     .append(top.snippet).append(' ');
         }
@@ -47,9 +49,11 @@ public final class HealthSummaryBuilder {
     }
 
     private static String label(String status) {
-        if ("HIGH_RISK".equals(status)) return "needs attention";
-        if ("ATTENTION".equals(status)) return "watch closely";
-        return "within typical range";
+        return switch (status) {
+            case "HIGH_RISK" -> "needs attention";
+            case "ATTENTION" -> "watch closely";
+            case null, default -> "within typical range";
+        };
     }
 
     private static String trim(double value) {

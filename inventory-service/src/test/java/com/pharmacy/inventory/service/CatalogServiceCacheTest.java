@@ -1,5 +1,7 @@
 package com.pharmacy.inventory.service;
 
+
+import java.util.List;
 import com.pharmacy.inventory.config.CacheConfig;
 import com.pharmacy.inventory.repository.CategoryRepository;
 import com.pharmacy.inventory.repository.ProductRepository;
@@ -13,7 +15,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
-import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;

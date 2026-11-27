@@ -1,5 +1,10 @@
 package com.pharmacy.gateway.realtime;
 
+
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArraySet;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pharmacy.gateway.dto.AccountSnapshot;
 import org.slf4j.Logger;
@@ -7,10 +12,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArraySet;
 
 @Component
 public class AccountHub {
@@ -83,16 +84,16 @@ public class AccountHub {
 
     private static Long longAttr(WebSocketSession session, String key) {
         Object value = session.getAttributes().get(key);
-        if (value instanceof Number number) {
-            return number.longValue();
-        }
-        if (value instanceof String text && !text.isBlank()) {
-            try {
-                return Long.parseLong(text);
-            } catch (NumberFormatException ignored) {
-                return null;
+        return switch (value) {
+            case Number number -> number.longValue();
+            case String text when !text.isBlank() -> {
+                try {
+                    yield Long.parseLong(text);
+                } catch (NumberFormatException ignored) {
+                    yield null;
+                }
             }
-        }
-        return null;
+            case null, default -> null;
+        };
     }
 }

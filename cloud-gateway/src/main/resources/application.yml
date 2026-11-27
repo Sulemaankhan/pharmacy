@@ -4,6 +4,9 @@ server:
 spring:
   application:
     name: cloud-gateway
+  threads:
+    virtual:
+      enabled: true
   main:
     web-application-type: reactive
   http:
@@ -91,7 +94,7 @@ eureka:
   client:
     service-url:
       defaultZone: ${EUREKA_URL:http://localhost:8761/eureka/}
-    registry-fetch-interval-seconds: 5
+    registry-fetch-interval-seconds: 15
   instance:
     hostname: localhost
     prefer-ip-address: false

@@ -1,12 +1,13 @@
 package com.pharmacy.drugstore.entity;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.pharmacy.drugstore.payment.PaymentStatus;
-import jakarta.persistence.*;
+
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.pharmacy.drugstore.payment.PaymentStatus;
+import jakarta.persistence.*;
 
 @Entity
 @Table(name = "customer_orders", indexes = @Index(name = "idx_orders_user_created", columnList = "user_id, created_at"))

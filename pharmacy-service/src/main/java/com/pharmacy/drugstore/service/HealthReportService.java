@@ -1,5 +1,13 @@
 package com.pharmacy.drugstore.service;
 
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Gatherers;
+import java.util.stream.IntStream;
 import com.pharmacy.drugstore.dto.HealthHighlightDto;
 import com.pharmacy.drugstore.dto.HealthHistoryDto;
 import com.pharmacy.drugstore.dto.HealthMetricDto;
@@ -17,6 +25,7 @@ import com.pharmacy.drugstore.health.LabCatalog;
 import com.pharmacy.drugstore.health.PdfReportReader;
 import com.pharmacy.drugstore.health.RagRetriever;
 import com.pharmacy.drugstore.health.TextChunker;
+import com.pharmacy.drugstore.parallel.StructuredFanout;
 import com.pharmacy.drugstore.repository.HealthReportRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,11 +35,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
 
 @Service
 public class HealthReportService {
@@ -65,20 +69,19 @@ public class HealthReportService {
         report.setFileName(safeName(file.getOriginalFilename()));
         report.setPageCount(extracted.pageCount());
 
-        List<String> pieces = TextChunker.chunk(extracted.text(), 900, 140);
-        int index = 0;
-        for (String piece : pieces) {
-            HealthReportChunk chunk = new HealthReportChunk();
+        String text = extracted.text();
+        List<String> pieces = TextChunker.chunk(text, 900, 140);
+        StructuredFanout.Pair<List<LabCatalog.Extracted>, List<HealthReportChunk>> prepared = StructuredFanout.both(
+                () -> LabCatalog.extract(text),
+                () -> embedAll(pieces));
+        for (HealthReportChunk chunk : prepared.right()) {
             chunk.setReport(report);
-            chunk.setChunkIndex(index++);
-            chunk.setContent(piece);
-            chunk.setEmbedding(HashingEmbedder.encode(HashingEmbedder.embed(piece)));
             report.getChunks().add(chunk);
         }
         report.setChunkCount(report.getChunks().size());
 
         List<RagRetriever.Hit> hits = RagRetriever.retrieve(report.getChunks());
-        List<LabCatalog.Extracted> found = LabCatalog.extract(extracted.text());
+        List<LabCatalog.Extracted> found = prepared.left();
         for (LabCatalog.Extracted item : found) {
             HealthMetric metric = new HealthMetric();
             metric.setUser(user);
@@ -130,7 +133,7 @@ public class HealthReportService {
     @Transactional(readOnly = true)
     public HealthStatusResponse status(User user) {
         List<HealthReport> history = reports.findByUser_IdOrderByUploadedAtDesc(user.getId());
-        HealthReport latest = history.isEmpty() ? null : history.get(0);
+        HealthReport latest = history.isEmpty() ? null : history.getFirst();
         List<HealthMetric> latestMetrics = latest == null ? List.of() : latest.getMetrics();
         Map<String, List<HealthMetric>> byPanel = new LinkedHashMap<>();
         for (String panel : LabCatalog.PANELS) byPanel.put(panel, new ArrayList<>());
@@ -171,6 +174,23 @@ public class HealthReportService {
                 metricDtos,
                 historyDtos
         );
+    }
+
+    private static List<HealthReportChunk> embedAll(List<String> pieces) {
+        if (pieces.isEmpty()) {
+            return List.of();
+        }
+        return IntStream.range(0, pieces.size()).boxed()
+                .gather(Gatherers.mapConcurrent(4, index -> embedChunk(index, pieces.get(index))))
+                .toList();
+    }
+
+    private static HealthReportChunk embedChunk(int index, String piece) {
+        HealthReportChunk chunk = new HealthReportChunk();
+        chunk.setChunkIndex(index);
+        chunk.setContent(piece);
+        chunk.setEmbedding(HashingEmbedder.encode(HashingEmbedder.embed(piece)));
+        return chunk;
     }
 
     private HealthReportResponse toReport(HealthReport report, boolean detail, List<RagRetriever.Hit> hits) {

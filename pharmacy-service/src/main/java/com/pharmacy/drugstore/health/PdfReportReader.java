@@ -1,10 +1,11 @@
 package com.pharmacy.drugstore.health;
 
+
+import java.io.IOException;
+import java.util.Locale;
 import com.lowagie.text.pdf.PdfReader;
 import com.lowagie.text.pdf.parser.PdfTextExtractor;
 import org.springframework.web.multipart.MultipartFile;
-import java.io.IOException;
-import java.util.Locale;
 
 public final class PdfReportReader {
     public record ExtractedPdf(String text, int pageCount) {}

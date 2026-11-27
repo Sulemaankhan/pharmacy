@@ -1,9 +1,10 @@
 package com.pharmacy.drugstore.entity;
 
+
+import java.time.Instant;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.pharmacy.drugstore.shipment.ShipmentStatus;
 import jakarta.persistence.*;
-import java.time.Instant;
 
 @Entity
 @Table(name = "shipments")

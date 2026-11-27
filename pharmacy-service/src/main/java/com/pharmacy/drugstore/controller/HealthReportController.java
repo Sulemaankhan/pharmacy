@@ -1,5 +1,7 @@
 package com.pharmacy.drugstore.controller;
 
+
+import java.util.List;
 import com.pharmacy.drugstore.dto.HealthReportResponse;
 import com.pharmacy.drugstore.dto.HealthStatusResponse;
 import com.pharmacy.drugstore.dto.HealthUploadResponse;
@@ -11,7 +13,6 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/health-reports")

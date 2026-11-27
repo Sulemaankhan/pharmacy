@@ -1,5 +1,7 @@
 package com.pharmacy.drugstore.reliability;
 
+
+import java.util.UUID;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pharmacy.drugstore.kafka.DomainEvent;
@@ -7,7 +9,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import java.util.UUID;
 
 @Service
 public class OutboxService {

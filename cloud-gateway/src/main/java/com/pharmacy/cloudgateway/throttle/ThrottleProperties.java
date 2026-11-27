@@ -1,7 +1,8 @@
 package com.pharmacy.cloudgateway.throttle;
 
-import org.springframework.boot.context.properties.ConfigurationProperties;
+
 import java.time.Duration;
+import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties(prefix = "app.throttle")
 public class ThrottleProperties {

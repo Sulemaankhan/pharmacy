@@ -1,12 +1,13 @@
 package com.pharmacy.payment.strategy;
 
-import com.pharmacy.payment.payment.PaymentMode;
-import org.springframework.stereotype.Component;
+
 import java.math.BigDecimal;
 import java.util.UUID;
+import com.pharmacy.payment.payment.PaymentMode;
+import org.springframework.stereotype.Component;
 
 @Component
-public class CodPaymentStrategy implements PaymentStrategy {
+public final class CodPaymentStrategy implements PaymentStrategy {
     private static final BigDecimal COD_LIMIT = new BigDecimal("5000");
 
     @Override

@@ -1,5 +1,10 @@
 package com.pharmacy.drugstore.config;
 
+
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.List;
 import com.pharmacy.drugstore.entity.Category;
 import com.pharmacy.drugstore.entity.Product;
 import com.pharmacy.drugstore.entity.User;
@@ -12,10 +17,6 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import java.math.BigDecimal;
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
-import java.util.List;
 
 @Configuration
 public class DataSeeder {

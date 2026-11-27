@@ -1,5 +1,8 @@
 package com.pharmacy.inventory.entity;
 
+
+import java.math.BigDecimal;
+import java.time.Instant;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -11,8 +14,6 @@ import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import java.math.BigDecimal;
-import java.time.Instant;
 
 @Entity
 @Table(name = "products", indexes = {

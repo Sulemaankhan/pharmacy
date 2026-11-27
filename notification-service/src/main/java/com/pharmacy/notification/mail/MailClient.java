@@ -1,14 +1,15 @@
 package com.pharmacy.notification.mail;
 
+
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
 import com.pharmacy.notification.entity.EmailNotificationLog;
 import com.pharmacy.notification.repository.EmailNotificationLogRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
 
 @Component
 public class MailClient {

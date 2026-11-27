@@ -1,5 +1,7 @@
 package com.pharmacy.drugstore.kafka;
 
+
+import java.time.Duration;
 import com.pharmacy.drugstore.dto.AccountSnapshot;
 import com.pharmacy.drugstore.dto.GatewayDebitRequest;
 import com.pharmacy.drugstore.dto.GatewayDebitResponse;
@@ -14,7 +16,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.server.ResponseStatusException;
-import java.time.Duration;
 
 @Component
 public class PaymentGatewayClient {
@@ -22,8 +23,10 @@ public class PaymentGatewayClient {
     private static final String UNAVAILABLE = "Gateway service is unavailable. Start gateway-service on port 8086.";
     private final RestClient rest;
 
-    public PaymentGatewayClient(@Value("${app.gateway-service.base-url:http://localhost:8086}") String baseUrl) {
-        this.rest = OutboundRest.client(baseUrl, Duration.ofSeconds(8));
+    public PaymentGatewayClient(
+            RestClient.Builder builder,
+            @Value("${app.gateway-service.base-url:http://localhost:8086}") String baseUrl) {
+        this.rest = OutboundRest.client(builder, baseUrl, Duration.ofSeconds(8));
     }
 
     @CircuitBreaker(name = "paymentGateway", fallbackMethod = "accountFallback")

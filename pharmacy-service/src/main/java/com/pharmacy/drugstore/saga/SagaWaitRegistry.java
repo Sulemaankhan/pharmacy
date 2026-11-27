@@ -1,11 +1,12 @@
 package com.pharmacy.drugstore.saga;
 
-import com.pharmacy.drugstore.dto.PaymentResponse;
-import org.springframework.stereotype.Component;
+
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import com.pharmacy.drugstore.dto.PaymentResponse;
+import org.springframework.stereotype.Component;
 
 @Component
 public class SagaWaitRegistry {

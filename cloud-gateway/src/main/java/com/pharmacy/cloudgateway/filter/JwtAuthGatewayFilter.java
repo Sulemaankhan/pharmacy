@@ -1,5 +1,10 @@
 package com.pharmacy.cloudgateway.filter;
 
+
+import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.Set;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
@@ -15,10 +20,6 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
-import javax.crypto.SecretKey;
-import java.nio.charset.StandardCharsets;
-import java.util.List;
-import java.util.Set;
 
 @Component
 public class JwtAuthGatewayFilter implements org.springframework.cloud.gateway.filter.GlobalFilter, Ordered {

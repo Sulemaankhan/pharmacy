@@ -1,10 +1,11 @@
 package com.pharmacy.drugstore.health;
 
-import com.pharmacy.drugstore.entity.HealthReportChunk;
+
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import com.pharmacy.drugstore.entity.HealthReportChunk;
 
 public final class RagRetriever {
     public static final class Hit {

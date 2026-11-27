@@ -2,6 +2,8 @@ package com.pharmacy.shipment.event;
 
 import java.time.Instant;
 
+
+
 public record ShipmentUpdate(
         Long id,
         Long userId,

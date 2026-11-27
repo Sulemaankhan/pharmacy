@@ -2,6 +2,8 @@ package com.pharmacy.drugstore.kafka;
 
 import java.util.List;
 
+
+
 public record StockCommand(
         String action,
         String correlationId,

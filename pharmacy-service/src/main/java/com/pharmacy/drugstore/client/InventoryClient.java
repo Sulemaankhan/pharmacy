@@ -1,5 +1,7 @@
 package com.pharmacy.drugstore.client;
 
+
+import java.util.List;
 import com.pharmacy.drugstore.entity.Category;
 import com.pharmacy.drugstore.entity.Product;
 import com.pharmacy.drugstore.resilience.OutboundRest;
@@ -13,7 +15,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.server.ResponseStatusException;
-import java.util.List;
 
 @Component
 public class InventoryClient {
@@ -21,8 +22,10 @@ public class InventoryClient {
     private static final String UNAVAILABLE = "Inventory service is unavailable. Start inventory-service on port 8088.";
     private final RestClient rest;
 
-    public InventoryClient(@Value("${app.inventory-service.base-url:http://localhost:8088}") String baseUrl) {
-        this.rest = OutboundRest.client(baseUrl);
+    public InventoryClient(
+            RestClient.Builder builder,
+            @Value("${app.inventory-service.base-url:http://localhost:8088}") String baseUrl) {
+        this.rest = OutboundRest.client(builder, baseUrl);
     }
 
     @CircuitBreaker(name = "inventoryService", fallbackMethod = "categoriesFallback")

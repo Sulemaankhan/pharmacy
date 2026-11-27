@@ -1,10 +1,20 @@
 package com.pharmacy.shipment.service;
 
+
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Set;
+import java.util.List;
+import java.util.stream.Collectors;
 import com.pharmacy.shipment.entity.Shipment;
 import com.pharmacy.shipment.event.DomainEvent;
 import com.pharmacy.shipment.event.ShipmentCommand;
 import com.pharmacy.shipment.event.ShipmentUpdate;
 import com.pharmacy.shipment.mapper.ShipmentMapper;
+import com.pharmacy.shipment.parallel.StructuredFanout;
 import com.pharmacy.shipment.realtime.ShipmentHub;
 import com.pharmacy.shipment.reliability.OutboxService;
 import com.pharmacy.shipment.repository.ShipmentRepository;
@@ -14,15 +24,9 @@ import org.slf4j.LoggerFactory;
 import com.pharmacy.shipment.event.ShipmentResult;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
-import java.time.Duration;
-import java.time.Instant;
-import java.util.Arrays;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Set;
-import java.util.List;
-import java.util.stream.Collectors;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @Service
 public class ShipmentTrackingService {
@@ -38,6 +42,7 @@ public class ShipmentTrackingService {
     private final ShipmentRepository shipments;
     private final ShipmentHub hub;
     private final OutboxService outbox;
+    private final TransactionTemplate tx;
     private final String updatesTopic;
     private final String eventsTopic;
     private final Set<String> unserviceablePincodes;
@@ -46,12 +51,14 @@ public class ShipmentTrackingService {
             ShipmentRepository shipments,
             ShipmentHub hub,
             OutboxService outbox,
+            PlatformTransactionManager transactionManager,
             @Value("${app.kafka.topics.shipment-updates}") String updatesTopic,
             @Value("${app.kafka.topics.shipment-events}") String eventsTopic,
             @Value("${app.shipment.unserviceable-pincodes:999999,000000}") String unserviceablePincodes) {
         this.shipments = shipments;
         this.hub = hub;
         this.outbox = outbox;
+        this.tx = new TransactionTemplate(transactionManager);
         this.updatesTopic = updatesTopic;
         this.eventsTopic = eventsTopic;
         this.unserviceablePincodes = Arrays.stream(unserviceablePincodes.split(","))
@@ -75,15 +82,22 @@ public class ShipmentTrackingService {
         };
     }
 
-    @Transactional
     public void refreshActive() {
-        List<Shipment> active = shipments.findByStatusIn(List.of(
+        List<Long> ids = shipments.findIdsByStatusIn(List.of(
                 ShipmentStatus.PENDING,
                 ShipmentStatus.CONFIRMED,
                 ShipmentStatus.PACKED,
                 ShipmentStatus.SHIPPED,
                 ShipmentStatus.OUT_FOR_DELIVERY));
-        active.forEach(this::advance);
+        StructuredFanout.each(ids.stream().map(id -> (Runnable) () -> advanceOne(id)).toList());
+    }
+
+    private void advanceOne(Long id) {
+        try {
+            tx.executeWithoutResult(status -> shipments.findById(id).ifPresent(this::advance));
+        } catch (Exception ex) {
+            log.error("Shipment advance failed id={}", id, ex);
+        }
     }
 
     private ShipmentResult applyPackageReady(ShipmentCommand command) {
@@ -210,7 +224,7 @@ public class ShipmentTrackingService {
         }
         Instant start = shipment.getCreatedAt() == null ? Instant.now() : shipment.getCreatedAt();
         long elapsed = Math.max(0, Duration.between(start, Instant.now()).getSeconds());
-        ShipmentStatus next = PIPELINE.get(0);
+        ShipmentStatus next = PIPELINE.getFirst();
         for (int i = THRESHOLDS_SECONDS.length - 1; i >= 0; i--) {
             if (elapsed >= THRESHOLDS_SECONDS[i]) {
                 next = PIPELINE.get(i);

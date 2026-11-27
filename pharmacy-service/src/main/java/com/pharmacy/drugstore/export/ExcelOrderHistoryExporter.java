@@ -1,5 +1,10 @@
 package com.pharmacy.drugstore.export;
 
+
+import java.io.ByteArrayOutputStream;
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.List;
 import com.pharmacy.drugstore.entity.CustomerOrder;
 import com.pharmacy.drugstore.entity.OrderItem;
 import com.pharmacy.drugstore.entity.User;
@@ -15,13 +20,9 @@ import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Component;
-import java.io.ByteArrayOutputStream;
-import java.math.BigDecimal;
-import java.time.Instant;
-import java.util.List;
 
 @Component
-public class ExcelOrderHistoryExporter extends AbstractOrderHistoryExporter {
+public final class ExcelOrderHistoryExporter extends AbstractOrderHistoryExporter {
     @Override
     public ExportFormat format() {
         return ExportFormat.EXCEL;

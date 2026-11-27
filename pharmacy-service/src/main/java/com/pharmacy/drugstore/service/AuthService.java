@@ -1,5 +1,7 @@
 package com.pharmacy.drugstore.service;
 
+
+import java.util.Map;
 import com.pharmacy.drugstore.client.CustomerClient;
 import com.pharmacy.drugstore.dto.AuthRequest;
 import com.pharmacy.drugstore.dto.AuthResponse;
@@ -14,7 +16,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
-import java.util.Map;
 
 @Service
 public class AuthService {

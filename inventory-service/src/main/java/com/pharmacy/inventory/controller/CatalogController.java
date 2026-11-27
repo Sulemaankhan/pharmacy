@@ -1,5 +1,7 @@
 package com.pharmacy.inventory.controller;
 
+
+import java.util.List;
 import com.pharmacy.inventory.entity.Category;
 import com.pharmacy.inventory.entity.Product;
 import com.pharmacy.inventory.repository.ProductRepository;
@@ -12,7 +14,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
-import java.util.List;
 
 @RestController
 @RequestMapping("/api")

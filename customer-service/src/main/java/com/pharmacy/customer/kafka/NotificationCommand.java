@@ -3,6 +3,8 @@ package com.pharmacy.customer.kafka;
 import java.math.BigDecimal;
 import java.util.List;
 
+
+
 public record NotificationCommand(
         String kind,
         String customerName,

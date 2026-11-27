@@ -1,12 +1,13 @@
 package com.pharmacy.cloudgateway.loadbalancer;
 
-import org.springframework.cloud.client.ServiceInstance;
-import org.springframework.stereotype.Component;
+
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
+import org.springframework.cloud.client.ServiceInstance;
+import org.springframework.stereotype.Component;
 
 @Component
 public class InstanceLoadTracker {

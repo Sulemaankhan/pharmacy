@@ -1,12 +1,13 @@
 package com.pharmacy.payment.strategy;
 
-import com.pharmacy.payment.payment.PaymentMode;
-import org.springframework.stereotype.Component;
+
 import java.util.Set;
 import java.util.UUID;
+import com.pharmacy.payment.payment.PaymentMode;
+import org.springframework.stereotype.Component;
 
 @Component
-public class WalletPaymentStrategy implements PaymentStrategy {
+public final class WalletPaymentStrategy implements PaymentStrategy {
     private static final Set<String> WALLETS = Set.of("PAYTM", "PHONEPE", "AMAZONPAY", "MOBIKWIK");
 
     @Override

@@ -1,7 +1,6 @@
 package com.pharmacy.notification.mail;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 import java.io.BufferedReader;
@@ -14,6 +13,8 @@ import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 class SmtpMailSender {
     private static final Logger log = LoggerFactory.getLogger(SmtpMailSender.class);

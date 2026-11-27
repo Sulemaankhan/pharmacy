@@ -1,5 +1,13 @@
 package com.pharmacy.gateway.service;
 
+
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.List;
+import java.util.Locale;
+import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import com.pharmacy.gateway.dto.AccountSnapshot;
 import com.pharmacy.gateway.dto.DebitRequest;
 import com.pharmacy.gateway.dto.DebitResponse;
@@ -17,13 +25,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
-import java.math.BigDecimal;
-import java.time.Instant;
-import java.util.List;
-import java.util.Locale;
-import java.util.UUID;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 @Service
 public class AccountService {
@@ -37,11 +38,8 @@ public class AccountService {
     private final BigDecimal openingBalance;
     private final String pharmacyEmail;
     private final String pharmacyName;
-    private final ExecutorService broadcasts = Executors.newSingleThreadExecutor(task -> {
-        Thread thread = new Thread(task, "account-broadcast");
-        thread.setDaemon(true);
-        return thread;
-    });
+    private final ExecutorService broadcasts = Executors.newSingleThreadExecutor(
+            Thread.ofVirtual().name("account-broadcast").factory());
 
     public AccountService(
             CustomerAccountRepository accounts,

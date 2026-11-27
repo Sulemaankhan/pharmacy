@@ -1,5 +1,7 @@
 package com.pharmacy.drugstore.client;
 
+
+import java.util.Map;
 import com.pharmacy.drugstore.dto.AuthRequest;
 import com.pharmacy.drugstore.dto.AuthResponse;
 import com.pharmacy.drugstore.dto.CustomerProfile;
@@ -17,7 +19,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.server.ResponseStatusException;
-import java.util.Map;
 
 @Component
 public class CustomerClient {
@@ -25,8 +26,10 @@ public class CustomerClient {
     private static final String UNAVAILABLE = "Customer service is unavailable. Start customer-service on port 8087.";
     private final RestClient rest;
 
-    public CustomerClient(@Value("${app.customer-service.base-url:http://localhost:8087}") String baseUrl) {
-        this.rest = OutboundRest.client(baseUrl);
+    public CustomerClient(
+            RestClient.Builder builder,
+            @Value("${app.customer-service.base-url:http://localhost:8087}") String baseUrl) {
+        this.rest = OutboundRest.client(builder, baseUrl);
     }
 
     @CircuitBreaker(name = "customerService", fallbackMethod = "authFallback")

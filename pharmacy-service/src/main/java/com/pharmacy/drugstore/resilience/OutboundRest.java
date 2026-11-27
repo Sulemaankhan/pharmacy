@@ -1,30 +1,20 @@
 package com.pharmacy.drugstore.resilience;
 
+import java.time.Duration;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
-import java.net.http.HttpClient;
-import java.time.Duration;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 public final class OutboundRest {
-    private static final ExecutorService HTTP_EXECUTOR = Executors.newFixedThreadPool(32);
-    private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(2))
-            .executor(HTTP_EXECUTOR)
-            .version(HttpClient.Version.HTTP_1_1)
-            .build();
-
     private OutboundRest() {}
 
-    public static RestClient client(String baseUrl) {
-        return client(baseUrl, Duration.ofSeconds(5));
+    public static RestClient client(RestClient.Builder builder, String baseUrl) {
+        return client(builder, baseUrl, Duration.ofSeconds(5));
     }
 
-    public static RestClient client(String baseUrl, Duration readTimeout) {
-        JdkClientHttpRequestFactory factory = new JdkClientHttpRequestFactory(HTTP_CLIENT);
+    public static RestClient client(RestClient.Builder builder, String baseUrl, Duration readTimeout) {
+        JdkClientHttpRequestFactory factory = new JdkClientHttpRequestFactory();
         factory.setReadTimeout(readTimeout);
-        return RestClient.builder().baseUrl(baseUrl).requestFactory(factory).build();
+        return builder.clone().baseUrl(baseUrl).requestFactory(factory).build();
     }
 
     public static String reason(Throwable ex) {

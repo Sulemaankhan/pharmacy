@@ -1,11 +1,12 @@
 package com.pharmacy.drugstore.repository;
 
+
+import java.util.List;
+import java.util.Optional;
 import com.pharmacy.drugstore.entity.CustomerOrder;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import java.util.List;
-import java.util.Optional;
 
 public interface CustomerOrderRepository extends JpaRepository<CustomerOrder, Long> {
     @Query("SELECT DISTINCT o FROM CustomerOrder o LEFT JOIN FETCH o.items LEFT JOIN FETCH o.payment LEFT JOIN FETCH o.shipment WHERE o.user.id = :userId ORDER BY o.createdAt DESC")
