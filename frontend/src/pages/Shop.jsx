@@ -61,7 +61,7 @@ export default function Shop() {
       <CatalogStatus
         loading={loadingCatalog && products.length === 0}
         error={catalogError}
-        onRetry={refreshCatalog}
+        onRetry={() => refreshCatalog({ force: true })}
       />
       {!loadingCatalog && products.length > 0 && list.length === 0 && (
         <EmptyState

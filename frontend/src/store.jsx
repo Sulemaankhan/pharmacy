@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { api, asList, expireSession, getToken, getUser, getValidUser, isTokenValid, onAuthCleared, ownedByCurrentUser, sameUserId, setAuth, tokenExpiresAt } from './api'
+import { isCatalogCacheFresh, readCatalogCache, writeCatalogCache } from './catalogCache'
 import { clientLog } from './log'
 
 const StoreContext = createContext(null)
@@ -12,27 +13,49 @@ function clearPrivateState(setCart, setWishlist, setOrders) {
 
 export function StoreProvider({ children }) {
   const [user, setUser] = useState(getValidUser)
-  const [products, setProducts] = useState([])
-  const [categories, setCategories] = useState([])
+  const [products, setProducts] = useState(() => asList(readCatalogCache()?.products))
+  const [categories, setCategories] = useState(() => asList(readCatalogCache()?.categories))
   const [cart, setCart] = useState([])
   const [wishlist, setWishlist] = useState([])
   const [orders, setOrders] = useState([])
   const [query, setQuery] = useState('')
   const [catalogError, setCatalogError] = useState('')
-  const [loadingCatalog, setLoadingCatalog] = useState(true)
+  const [loadingCatalog, setLoadingCatalog] = useState(() => !asList(readCatalogCache()?.products).length)
   const [profile, setProfile] = useState(null)
   const catalogLoad = useRef(null)
   const userLoad = useRef(null)
   const profileLoad = useRef(null)
 
-  function refreshCatalog() {
+  function refreshCatalog(options = {}) {
+    const force = Boolean(options.force)
     if (catalogLoad.current) return catalogLoad.current
+    const cached = readCatalogCache()
+    if (!force && isCatalogCacheFresh(cached)) {
+      setProducts(asList(cached.products))
+      setCategories(asList(cached.categories))
+      setCatalogError('')
+      setLoadingCatalog(false)
+      return Promise.resolve()
+    }
+    if (cached && asList(cached.products).length) {
+      setProducts(asList(cached.products))
+      setCategories(asList(cached.categories))
+      setLoadingCatalog(false)
+    }
     catalogLoad.current = (async () => {
-      setLoadingCatalog(true)
+      const showSpinner = !asList(cached?.products).length
+      if (showSpinner) setLoadingCatalog(true)
       try {
-        const [p, c] = await Promise.all([api('/api/products'), api('/api/categories')])
-        setProducts(asList(p))
-        setCategories(asList(c))
+        const cacheMode = force ? 'reload' : 'default'
+        const [p, c] = await Promise.all([
+          api('/api/products', { cache: cacheMode }),
+          api('/api/categories', { cache: cacheMode }),
+        ])
+        const nextProducts = asList(p)
+        const nextCategories = asList(c)
+        setProducts(nextProducts)
+        setCategories(nextCategories)
+        writeCatalogCache(nextProducts, nextCategories)
         setCatalogError('')
       } finally {
         setLoadingCatalog(false)
@@ -178,11 +201,12 @@ export function StoreProvider({ children }) {
   useEffect(() => {
     let tries = 0
     let timer
-    const load = () => {
-      refreshCatalog().catch((err) => {
-        setCatalogError(err.message || 'Could not load products')
+    const load = (force = false) => {
+      refreshCatalog({ force }).catch((err) => {
         setLoadingCatalog(false)
-        if (tries++ < 6) timer = setTimeout(load, 1500)
+        if (asList(readCatalogCache()?.products).length) return
+        setCatalogError(err.message || 'Could not load products')
+        if (tries++ < 6) timer = setTimeout(() => load(true), 1500)
       })
     }
     load()

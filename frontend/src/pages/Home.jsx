@@ -140,7 +140,7 @@ export default function Home() {
           <CatalogStatus
             loading={loadingCatalog && products.length === 0}
             error={catalogError}
-            onRetry={refreshCatalog}
+            onRetry={() => refreshCatalog({ force: true })}
           />
         </section>
       )}

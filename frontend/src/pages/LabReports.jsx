@@ -52,7 +52,7 @@ export default function LabReports() {
         loading={loadingCatalog && products.length === 0}
         error={catalogError}
         loadingLabel="Loading lab tests..."
-        onRetry={refreshCatalog}
+        onRetry={() => refreshCatalog({ force: true })}
       />
       {!loadingCatalog && list.length === 0 && (
         <EmptyState

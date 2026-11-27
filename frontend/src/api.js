@@ -121,6 +121,10 @@ function isAuthRequest(path) {
   return path.startsWith('/api/auth')
 }
 
+function isPublicCatalog(path, method) {
+  return method === 'GET' && (path.startsWith('/api/products') || path.startsWith('/api/categories'))
+}
+
 export function asList(data) {
   if (Array.isArray(data)) return data
   if (Array.isArray(data?.content)) return data.content
@@ -149,7 +153,7 @@ export async function api(path, options = {}) {
     expireSession()
     token = null
   }
-  if (token) headers.Authorization = `Bearer ${token}`
+  if (token && !isPublicCatalog(path, method)) headers.Authorization = `Bearer ${token}`
   let parsedBody
   try { parsedBody = options.body ? JSON.parse(options.body) : undefined } catch { parsedBody = undefined }
   clientLog('info', 'api.request', { requestId, method, path, body: redact(parsedBody) })
