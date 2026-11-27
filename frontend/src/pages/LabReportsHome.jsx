@@ -1,7 +1,12 @@
-import { Link } from 'react-router-dom'
+import { Link, Navigate, useLocation } from 'react-router-dom'
 import LabReportsTabs from '../components/LabReportsTabs'
 
 export default function LabReportsHome() {
+  const { search } = useLocation()
+  if (new URLSearchParams(search).get('panel')) {
+    return <Navigate to={`/lab-tests${search}`} replace />
+  }
+
   return (
     <div className="container page">
       <p className="crumb">Home / Lab Reports</p>

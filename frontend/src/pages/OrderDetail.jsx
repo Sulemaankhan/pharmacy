@@ -3,6 +3,8 @@ import { Link, useParams } from 'react-router-dom'
 import { useStore } from '../store'
 import { api, downloadFile } from '../api'
 import { formatMoney } from '../money'
+import LazyImage from '../components/LazyImage'
+import RequireSignIn from '../components/RequireSignIn'
 import ShipmentTracker from '../components/ShipmentTracker'
 import { connectShipmentSocket, fetchOrderShipment } from '../shipments'
 
@@ -104,14 +106,7 @@ export default function OrderDetail() {
   }
 
   if (!user) {
-    return (
-      <div className="container page">
-        <div className="empty">
-          <p>Please sign in to view this order.</p>
-          <Link className="btn" to="/auth" style={{ marginTop: 16 }}>Sign in</Link>
-        </div>
-      </div>
-    )
+    return <RequireSignIn user={user} message="Please sign in to view this order." />
   }
 
   if (error) {
@@ -142,7 +137,7 @@ export default function OrderDetail() {
         <div className="panel wide">
           {(order.items || []).map((item) => (
             <div className="cart-row" key={item.id || item.productName}>
-              <img src={item.imageUrl} alt="" />
+              <LazyImage src={item.imageUrl} alt="" />
               <div>
                 {item.productId ? <Link to={`/product/${item.productId}`}><b>{item.productName}</b></Link> : <b>{item.productName}</b>}
                 <div className="muted">Qty {item.quantity}</div>

@@ -1,6 +1,9 @@
-import { useEffect, useMemo } from 'react'
+import { useMemo } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import ProductCard from '../components/ProductCard'
+import BrowseLayout from '../components/BrowseLayout'
+import CatalogStatus from '../components/CatalogStatus'
+import EmptyState from '../components/EmptyState'
+import ProductGrid from '../components/ProductGrid'
 import { useStore } from '../store'
 import { isLabProduct, isShopCategory } from '../labReports'
 
@@ -12,10 +15,6 @@ export default function Shop() {
   const dealsOnly = params.get('deals') === '1'
   const shopCategories = categories.filter(isShopCategory)
   const activeCategory = shopCategories.find((c) => String(c.id) === categoryId)
-
-  useEffect(() => {
-    if (products.length === 0) refreshCatalog().catch(() => {})
-  }, [])
 
   const list = useMemo(() => {
     return products.filter((p) => {
@@ -42,37 +41,37 @@ export default function Shop() {
   const title = dealsOnly ? 'Hot Sale' : q ? `Search: ${q}` : activeCategory ? activeCategory.name : 'Shop'
 
   return (
-    <div className="container page shop-layout">
-      <aside className="side">
-        <h3>Categories</h3>
-        <button className={!categoryId ? 'active' : ''} onClick={() => setCategory(null)}>All products</button>
-        {shopCategories.map((c) => (
-          <button key={c.id} className={String(c.id) === categoryId ? 'active' : ''} onClick={() => setCategory(String(c.id))}>
-            {c.name}
-          </button>
-        ))}
-        <Link className="link-btn" to="/shop?deals=1" style={{ display: 'block', marginTop: 16 }}>Today's deals</Link>
-      </aside>
-      <div>
-        <p className="crumb">Home / {title}</p>
-        <h2 className="page-title">{title}</h2>
-        <p className="muted">{list.length} products available</p>
-        {catalogError && (
-          <p className="error">
-            {catalogError} <button className="link-btn" onClick={() => refreshCatalog()}>Retry</button>
-          </p>
-        )}
-        {loadingCatalog && products.length === 0 && <p className="muted">Loading products...</p>}
-        {!loadingCatalog && products.length > 0 && list.length === 0 && (
-          <div className="empty" style={{ marginTop: 20 }}>
-            <p>No products match this filter.</p>
-            <button className="btn" style={{ marginTop: 12 }} onClick={clearFilters}>Clear filters</button>
-          </div>
-        )}
-        <div className="grid" style={{ marginTop: 18 }}>
-          {list.map((p) => <ProductCard key={p.id} product={p} />)}
-        </div>
-      </div>
-    </div>
+    <BrowseLayout
+      sidebarTitle="Categories"
+      crumb={`Home / ${title}`}
+      title={title}
+      sidebar={(
+        <>
+          <button className={!categoryId ? 'active' : ''} onClick={() => setCategory(null)}>All products</button>
+          {shopCategories.map((c) => (
+            <button key={c.id} className={String(c.id) === categoryId ? 'active' : ''} onClick={() => setCategory(String(c.id))}>
+              {c.name}
+            </button>
+          ))}
+          <Link className="link-btn" to="/shop?deals=1" style={{ display: 'block', marginTop: 16 }}>Today's deals</Link>
+        </>
+      )}
+    >
+      <p className="muted">{list.length} products available</p>
+      <CatalogStatus
+        loading={loadingCatalog && products.length === 0}
+        error={catalogError}
+        onRetry={refreshCatalog}
+      />
+      {!loadingCatalog && products.length > 0 && list.length === 0 && (
+        <EmptyState
+          message="No products match this filter."
+          actionLabel="Clear filters"
+          onAction={clearFilters}
+          style={{ marginTop: 20 }}
+        />
+      )}
+      <ProductGrid products={list} style={{ marginTop: 18 }} />
+    </BrowseLayout>
   )
 }

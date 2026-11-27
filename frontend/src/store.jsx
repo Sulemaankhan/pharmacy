@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react'
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { api, asList, expireSession, getToken, getUser, getValidUser, isTokenValid, onAuthCleared, ownedByCurrentUser, sameUserId, setAuth, tokenExpiresAt } from './api'
 import { clientLog } from './log'
 
@@ -21,39 +21,58 @@ export function StoreProvider({ children }) {
   const [catalogError, setCatalogError] = useState('')
   const [loadingCatalog, setLoadingCatalog] = useState(true)
   const [profile, setProfile] = useState(null)
+  const catalogLoad = useRef(null)
+  const userLoad = useRef(null)
+  const profileLoad = useRef(null)
 
-  async function refreshCatalog() {
-    setLoadingCatalog(true)
-    const [p, c] = await Promise.all([api('/api/products'), api('/api/categories')])
-    setProducts(asList(p))
-    setCategories(asList(c))
-    setCatalogError('')
-    setLoadingCatalog(false)
+  function refreshCatalog() {
+    if (catalogLoad.current) return catalogLoad.current
+    catalogLoad.current = (async () => {
+      setLoadingCatalog(true)
+      try {
+        const [p, c] = await Promise.all([api('/api/products'), api('/api/categories')])
+        setProducts(asList(p))
+        setCategories(asList(c))
+        setCatalogError('')
+      } finally {
+        setLoadingCatalog(false)
+        catalogLoad.current = null
+      }
+    })()
+    return catalogLoad.current
   }
 
-  async function refreshUserData(expectedUserId = getUser()?.userId) {
+  function refreshUserData(expectedUserId = getUser()?.userId) {
     const uid = expectedUserId ?? getUser()?.userId
     if (uid == null || !isTokenValid()) {
       if (!isTokenValid() && (getToken() || getUser())) expireSession()
       else clearPrivateState(setCart, setWishlist, setOrders)
-      return
+      return Promise.resolve()
     }
-    const [cartRes, wishRes, orderRes] = await Promise.allSettled([
-      api('/api/cart'),
-      api('/api/wishlist'),
-      api('/api/orders'),
-    ])
-    if (!sameUserId(getUser()?.userId, uid)) return
-    if (cartRes.status === 'fulfilled') setCart(ownedByCurrentUser(cartRes.value, uid))
-    if (wishRes.status === 'fulfilled') setWishlist(ownedByCurrentUser(wishRes.value, uid))
-    if (orderRes.status === 'fulfilled') setOrders(ownedByCurrentUser(orderRes.value, uid))
-    clientLog('info', 'user.data.refresh', {
-      userId: uid,
-      cart: cartRes.status === 'fulfilled' ? ownedByCurrentUser(cartRes.value, uid).length : cartRes.reason?.message,
-      wishlist: wishRes.status === 'fulfilled' ? ownedByCurrentUser(wishRes.value, uid).length : wishRes.reason?.message,
-      orders: orderRes.status === 'fulfilled' ? ownedByCurrentUser(orderRes.value, uid).length : orderRes.reason?.message,
+    if (userLoad.current?.uid === uid) return userLoad.current.promise
+    const promise = (async () => {
+      const [cartRes, wishRes, orderRes] = await Promise.allSettled([
+        api('/api/cart'),
+        api('/api/wishlist'),
+        api('/api/orders'),
+      ])
+      if (!sameUserId(getUser()?.userId, uid)) return
+      if (cartRes.status === 'fulfilled') setCart(ownedByCurrentUser(cartRes.value, uid))
+      if (wishRes.status === 'fulfilled') setWishlist(ownedByCurrentUser(wishRes.value, uid))
+      if (orderRes.status === 'fulfilled') setOrders(ownedByCurrentUser(orderRes.value, uid))
+      clientLog('info', 'user.data.refresh', {
+        userId: uid,
+        cart: cartRes.status === 'fulfilled' ? ownedByCurrentUser(cartRes.value, uid).length : cartRes.reason?.message,
+        wishlist: wishRes.status === 'fulfilled' ? ownedByCurrentUser(wishRes.value, uid).length : wishRes.reason?.message,
+        orders: orderRes.status === 'fulfilled' ? ownedByCurrentUser(orderRes.value, uid).length : orderRes.reason?.message,
+      })
+      if (cartRes.status === 'rejected') throw cartRes.reason
+    })()
+    userLoad.current = { uid, promise }
+    promise.finally(() => {
+      if (userLoad.current?.promise === promise) userLoad.current = null
     })
-    if (cartRes.status === 'rejected') throw cartRes.reason
+    return promise
   }
 
   async function refreshCart(expectedUserId = getUser()?.userId) {
@@ -95,15 +114,24 @@ export function StoreProvider({ children }) {
     })
   }
 
-  async function refreshProfile() {
+  function refreshProfile() {
     if (!isTokenValid() || !getUser()?.userId) {
       setProfile(null)
-      return null
+      return Promise.resolve(null)
     }
-    const data = await api('/api/profile')
-    if (!sameUserId(getUser()?.userId, data.userId)) return null
-    applyProfile(data)
-    return data
+    const uid = getUser()?.userId
+    if (profileLoad.current?.uid === uid) return profileLoad.current.promise
+    const promise = (async () => {
+      const data = await api('/api/profile')
+      if (!sameUserId(getUser()?.userId, data.userId)) return null
+      applyProfile(data)
+      return data
+    })()
+    profileLoad.current = { uid, promise }
+    promise.finally(() => {
+      if (profileLoad.current?.promise === promise) profileLoad.current = null
+    })
+    return promise
   }
 
   useEffect(() => {

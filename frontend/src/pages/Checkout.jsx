@@ -4,6 +4,8 @@ import { useStore } from '../store'
 import { formatMoney } from '../money'
 import { api } from '../api'
 import { clientLog } from '../log'
+import EmptyState from '../components/EmptyState'
+import RequireSignIn from '../components/RequireSignIn'
 
 const MODES = [
   { code: 'UPI', label: 'UPI', hint: 'GPay / PhonePe / Paytm' },
@@ -137,23 +139,13 @@ export default function Checkout() {
   }
 
   if (!user) {
-    return (
-      <div className="container page">
-        <div className="empty">
-          <h2>Sign in to checkout</h2>
-          <Link className="btn" to="/auth" style={{ marginTop: 16 }}>Sign in</Link>
-        </div>
-      </div>
-    )
+    return <RequireSignIn user={user} title="Sign in to checkout" />
   }
 
   if (!cart.length) {
     return (
       <div className="container page">
-        <div className="empty">
-          <p>Your cart is empty.</p>
-          <Link className="btn" to="/shop" style={{ marginTop: 16 }}>Continue shopping</Link>
-        </div>
+        <EmptyState message="Your cart is empty." actionTo="/shop" actionLabel="Continue shopping" />
       </div>
     )
   }

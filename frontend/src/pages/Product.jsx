@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useStore } from '../store'
 import { formatMoney } from '../money'
-import ProductCard from '../components/ProductCard'
+import LazyImage from '../components/LazyImage'
+import ProductGrid from '../components/ProductGrid'
 import { isLabProduct, panelLabel } from '../labReports'
 
 export default function ProductPage() {
@@ -30,7 +31,7 @@ export default function ProductPage() {
       <div className="detail">
         <div className="detail-img">
           {off > 0 && <span className="sale-tag">-{off}%</span>}
-          <img src={product.imageUrl} alt={product.name} />
+          <LazyImage eager src={product.imageUrl} alt={product.name} />
         </div>
         <div>
           <div className="muted">
@@ -73,9 +74,7 @@ export default function ProductPage() {
             <h2>{isLabProduct(product) ? 'Related lab tests' : 'Related products'}</h2>
             <Link className="link-btn" to={isLabProduct(product) ? `/lab-tests?panel=${product.labPanel}` : '/shop'}>View all</Link>
           </div>
-          <div className="grid">
-            {related.map((p) => <ProductCard key={p.id} product={p} />)}
-          </div>
+          <ProductGrid products={related} />
         </section>
       )}
     </div>

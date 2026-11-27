@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useStore } from '../store'
 import { connectShipmentSocket, fetchShipments } from '../shipments'
+import EmptyState from '../components/EmptyState'
 import ProfileTabs from '../components/ProfileTabs'
+import RequireSignIn from '../components/RequireSignIn'
 
 function formatDate(iso) {
   if (!iso) return ''
@@ -46,13 +48,11 @@ export default function Shipments() {
 
   if (!user) {
     return (
-      <div className="container page">
-        <div className="empty">
-          <h2>Sign in to track shipments</h2>
-          <p className="muted">Address, contact number and email ID are saved with every order.</p>
-          <Link className="btn" to="/auth" style={{ marginTop: 16 }}>Sign in</Link>
-        </div>
-      </div>
+      <RequireSignIn
+        user={user}
+        title="Sign in to track shipments"
+        message="Address, contact number and email ID are saved with every order."
+      />
     )
   }
 
@@ -68,10 +68,7 @@ export default function Shipments() {
       </div>
       {error && <p className="error">{error}</p>}
       {list.length === 0 && !error && (
-        <div className="empty">
-          <p>No shipments yet.</p>
-          <Link className="btn" to="/shop" style={{ marginTop: 16 }}>Start shopping</Link>
-        </div>
+        <EmptyState message="No shipments yet." actionTo="/shop" actionLabel="Start shopping" />
       )}
       <div className="order-list">
         {list.map((ship) => (

@@ -1,6 +1,9 @@
-import { useEffect, useMemo } from 'react'
+import { useMemo } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import ProductCard from '../components/ProductCard'
+import BrowseLayout from '../components/BrowseLayout'
+import CatalogStatus from '../components/CatalogStatus'
+import EmptyState from '../components/EmptyState'
+import ProductGrid from '../components/ProductGrid'
 import { useStore } from '../store'
 import { LAB_PANELS, isLabProduct, panelLabel } from '../labReports'
 import LabReportsTabs from '../components/LabReportsTabs'
@@ -10,10 +13,6 @@ export default function LabReports() {
   const [params, setParams] = useSearchParams()
   const panel = (params.get('panel') || '').toUpperCase()
   const active = LAB_PANELS.find((item) => item.id === panel)
-
-  useEffect(() => {
-    if (products.length === 0) refreshCatalog().catch(() => {})
-  }, [])
 
   const list = useMemo(() => {
     return products.filter((p) => isLabProduct(p) && (!panel || p.labPanel === panel))
@@ -29,57 +28,58 @@ export default function LabReports() {
   const title = active ? `${active.name} tests` : 'Lab Tests'
 
   return (
-    <div className="container page shop-layout">
-      <aside className="side">
-        <h3>Lab tests</h3>
-        <button className={!panel ? 'active' : ''} onClick={() => setPanel(null)}>All tests</button>
-        {LAB_PANELS.map((item) => (
-          <button key={item.id} className={item.id === panel ? 'active' : ''} onClick={() => setPanel(item.id)}>
-            {item.name}
-          </button>
-        ))}
-      </aside>
-      <div>
-        <p className="crumb">Home / Lab Reports / Lab Tests{active ? ` / ${active.name}` : ''}</p>
-        <h2 className="page-title">{title}</h2>
-        <LabReportsTabs />
-        <p className="muted">
-          {active ? active.blurb : 'Book thyroid, kidney, liver, heart and diabetes tests. Add to cart like shop products.'}
-        </p>
-        <p className="muted">{list.length} tests available</p>
-        {catalogError && (
-          <p className="error">
-            {catalogError} <button className="link-btn" onClick={() => refreshCatalog()}>Retry</button>
-          </p>
-        )}
-        {loadingCatalog && products.length === 0 && <p className="muted">Loading lab tests...</p>}
-        {!loadingCatalog && list.length === 0 && (
-          <div className="empty" style={{ marginTop: 20 }}>
-            <p>No lab tests in this group yet.</p>
-            <Link className="btn" style={{ marginTop: 12 }} to="/lab-tests">View all tests</Link>
-          </div>
-        )}
-        <div className="lab-chips">
+    <BrowseLayout
+      sidebarTitle="Lab tests"
+      crumb={`Home / Lab Reports / Lab Tests${active ? ` / ${active.name}` : ''}`}
+      title={title}
+      sidebar={(
+        <>
+          <button className={!panel ? 'active' : ''} onClick={() => setPanel(null)}>All tests</button>
           {LAB_PANELS.map((item) => (
-            <Link
-              key={item.id}
-              className={`lab-chip${item.id === panel ? ' on' : ''}`}
-              to={`/lab-tests?panel=${item.id}`}
-            >
-              <b>{item.name}</b>
-              <span>{item.blurb}</span>
-            </Link>
+            <button key={item.id} className={item.id === panel ? 'active' : ''} onClick={() => setPanel(item.id)}>
+              {item.name}
+            </button>
           ))}
-        </div>
-        <div className="grid" style={{ marginTop: 18 }}>
-          {list.map((p) => <ProductCard key={p.id} product={p} />)}
-        </div>
-        {list.length > 0 && panel && (
-          <p className="muted" style={{ marginTop: 16 }}>
-            Showing {panelLabel(panel)} tests. <Link className="link-btn" to="/lab-tests">See all lab tests</Link>
-          </p>
-        )}
+        </>
+      )}
+    >
+      <LabReportsTabs />
+      <p className="muted">
+        {active ? active.blurb : 'Book thyroid, kidney, liver, heart and diabetes tests. Add to cart like shop products.'}
+      </p>
+      <p className="muted">{list.length} tests available</p>
+      <CatalogStatus
+        loading={loadingCatalog && products.length === 0}
+        error={catalogError}
+        loadingLabel="Loading lab tests..."
+        onRetry={refreshCatalog}
+      />
+      {!loadingCatalog && list.length === 0 && (
+        <EmptyState
+          message="No lab tests in this group yet."
+          actionTo="/lab-tests"
+          actionLabel="View all tests"
+          style={{ marginTop: 20 }}
+        />
+      )}
+      <div className="lab-chips">
+        {LAB_PANELS.map((item) => (
+          <Link
+            key={item.id}
+            className={`lab-chip${item.id === panel ? ' on' : ''}`}
+            to={`/lab-tests?panel=${item.id}`}
+          >
+            <b>{item.name}</b>
+            <span>{item.blurb}</span>
+          </Link>
+        ))}
       </div>
-    </div>
+      <ProductGrid products={list} style={{ marginTop: 18 }} />
+      {list.length > 0 && panel && (
+        <p className="muted" style={{ marginTop: 16 }}>
+          Showing {panelLabel(panel)} tests. <Link className="link-btn" to="/lab-tests">See all lab tests</Link>
+        </p>
+      )}
+    </BrowseLayout>
   )
 }
