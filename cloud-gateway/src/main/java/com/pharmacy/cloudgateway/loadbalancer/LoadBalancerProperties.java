@@ -1,8 +1,9 @@
 package com.pharmacy.cloudgateway.loadbalancer;
 
-import org.springframework.boot.context.properties.ConfigurationProperties;
+
 import java.util.LinkedHashMap;
 import java.util.Map;
+import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties(prefix = "app.load-balancer")
 public class LoadBalancerProperties {

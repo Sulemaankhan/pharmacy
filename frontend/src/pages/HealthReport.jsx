@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { api, apiUpload, asList } from '../api'
 import { useStore } from '../store'
 import LabReportsTabs from '../components/LabReportsTabs'
+import RequireSignIn from '../components/RequireSignIn'
 
 const PANELS = [
   { id: 'THYROID', name: 'Thyroid' },
@@ -205,14 +206,12 @@ export default function HealthReport() {
 
   if (!user) {
     return (
-      <div className="container page">
-        <p className="crumb">Home / Lab Reports / Report Status</p>
-        <div className="empty">
-          <h2>Sign in to view report status</h2>
-          <p className="muted">PDF lab reports are read with RAG, then your profile status is drawn as charts.</p>
-          <Link className="btn" to="/auth" style={{ marginTop: 16 }}>Sign in</Link>
-        </div>
-      </div>
+      <RequireSignIn
+        user={user}
+        crumb="Home / Lab Reports / Report Status"
+        title="Sign in to view report status"
+        message="PDF lab reports are read with RAG, then your profile status is drawn as charts."
+      />
     )
   }
 

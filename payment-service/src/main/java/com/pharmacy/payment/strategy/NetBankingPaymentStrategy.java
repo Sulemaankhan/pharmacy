@@ -1,12 +1,13 @@
 package com.pharmacy.payment.strategy;
 
-import com.pharmacy.payment.payment.PaymentMode;
-import org.springframework.stereotype.Component;
+
 import java.util.Set;
 import java.util.UUID;
+import com.pharmacy.payment.payment.PaymentMode;
+import org.springframework.stereotype.Component;
 
 @Component
-public class NetBankingPaymentStrategy implements PaymentStrategy {
+public final class NetBankingPaymentStrategy implements PaymentStrategy {
     private static final Set<String> BANKS = Set.of("SBI", "HDFC", "ICICI", "AXIS", "PNB", "KOTAK");
 
     @Override

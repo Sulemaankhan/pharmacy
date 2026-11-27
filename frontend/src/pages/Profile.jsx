@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useStore } from '../store'
 import ProfileTabs from '../components/ProfileTabs'
+import RequireSignIn from '../components/RequireSignIn'
 import { connectAccountSocket, fetchAccount, fetchPharmacyAccount } from '../account'
 import { formatMoney } from '../money'
 
@@ -62,13 +63,11 @@ export default function Profile() {
 
   if (!user) {
     return (
-      <div className="container page">
-        <div className="empty">
-          <h2>Sign in to view your profile</h2>
-          <p className="muted">Your name, contact and live order stats stay on this page.</p>
-          <Link className="btn" to="/auth" style={{ marginTop: 16 }}>Sign in</Link>
-        </div>
-      </div>
+      <RequireSignIn
+        user={user}
+        title="Sign in to view your profile"
+        message="Your name, contact and live order stats stay on this page."
+      />
     )
   }
 

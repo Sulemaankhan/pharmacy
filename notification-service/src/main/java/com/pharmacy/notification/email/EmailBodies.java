@@ -1,8 +1,9 @@
 package com.pharmacy.notification.email;
 
-import com.pharmacy.notification.event.NotificationCommand;
+
 import java.math.BigDecimal;
 import java.util.List;
+import com.pharmacy.notification.event.NotificationCommand;
 
 final class EmailBodies {
     private EmailBodies() {}

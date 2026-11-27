@@ -1,8 +1,9 @@
 package com.pharmacy.cloudgateway.ratelimit;
 
-import org.springframework.boot.context.properties.ConfigurationProperties;
+
 import java.time.Duration;
 import java.util.Objects;
+import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties(prefix = "app.rate-limit")
 public class RateLimitProperties {

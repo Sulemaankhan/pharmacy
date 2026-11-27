@@ -1,5 +1,7 @@
 package com.pharmacy.drugstore.security;
 
+import java.io.IOException;
+import java.util.List;
 import com.pharmacy.drugstore.entity.User;
 import com.pharmacy.drugstore.logging.RequestMdc;
 import com.pharmacy.drugstore.repository.UserRepository;
@@ -12,11 +14,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
-import java.io.IOException;
-import java.util.List;
 
 @Component
 public class JwtAuthFilter extends OncePerRequestFilter {
@@ -51,7 +52,9 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                                 user.getEmail(),
                                 null,
                                 List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole())));
-                        SecurityContextHolder.getContext().setAuthentication(auth);
+                        SecurityContext context = SecurityContextHolder.createEmptyContext();
+                        context.setAuthentication(auth);
+                        SecurityContextHolder.setContext(context);
                         log.debug("JWT accepted {}", RequestMdc.describe(user));
                     } else {
                         RequestMdc.setAnonymous();

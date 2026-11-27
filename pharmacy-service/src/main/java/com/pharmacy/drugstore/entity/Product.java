@@ -1,9 +1,10 @@
 package com.pharmacy.drugstore.entity;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import jakarta.persistence.*;
+
 import java.math.BigDecimal;
 import java.time.Instant;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import jakarta.persistence.*;
 
 @Entity
 @Table(name = "products")

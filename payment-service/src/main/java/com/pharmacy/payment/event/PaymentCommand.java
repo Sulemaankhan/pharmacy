@@ -2,6 +2,8 @@ package com.pharmacy.payment.event;
 
 import java.math.BigDecimal;
 
+
+
 public record PaymentCommand(
         String correlationId,
         String orderNumber,

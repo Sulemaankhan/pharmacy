@@ -1,11 +1,12 @@
 package com.pharmacy.inventory.reliability;
 
+
+import java.util.UUID;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pharmacy.inventory.event.DomainEvent;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import java.util.UUID;
 
 @Service
 public class OutboxService {

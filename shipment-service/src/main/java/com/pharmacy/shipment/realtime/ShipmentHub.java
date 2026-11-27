@@ -1,5 +1,11 @@
 package com.pharmacy.shipment.realtime;
 
+
+import java.io.IOException;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArraySet;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pharmacy.shipment.event.ShipmentUpdate;
 import org.slf4j.Logger;
@@ -7,11 +13,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
-import java.io.IOException;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArraySet;
 
 @Component
 public class ShipmentHub {
@@ -93,19 +94,17 @@ public class ShipmentHub {
 
     private static Long userId(WebSocketSession session) {
         Object value = session.getAttributes().get("userId");
-        if (value instanceof Long number) {
-            return number;
-        }
-        if (value instanceof Number number) {
-            return number.longValue();
-        }
-        if (value instanceof String text && !text.isBlank()) {
-            try {
-                return Long.parseLong(text);
-            } catch (NumberFormatException ignored) {
-                return null;
+        return switch (value) {
+            case Long number -> number;
+            case Number number -> number.longValue();
+            case String text when !text.isBlank() -> {
+                try {
+                    yield Long.parseLong(text);
+                } catch (NumberFormatException ignored) {
+                    yield null;
+                }
             }
-        }
-        return null;
+            case null, default -> null;
+        };
     }
 }

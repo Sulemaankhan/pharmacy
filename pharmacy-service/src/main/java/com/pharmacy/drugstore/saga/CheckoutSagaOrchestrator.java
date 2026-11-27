@@ -1,5 +1,13 @@
 package com.pharmacy.drugstore.saga;
 
+
+import java.math.BigDecimal;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pharmacy.drugstore.dto.GatewayDebitRequest;
 import com.pharmacy.drugstore.dto.GatewayDebitResponse;
@@ -14,6 +22,7 @@ import com.pharmacy.drugstore.kafka.PaymentResult;
 import com.pharmacy.drugstore.kafka.ShipmentCommand;
 import com.pharmacy.drugstore.kafka.StockCommand;
 import com.pharmacy.drugstore.logging.RequestMdc;
+import com.pharmacy.drugstore.parallel.StructuredFanout;
 import com.pharmacy.drugstore.payment.PaymentMode;
 import com.pharmacy.drugstore.reliability.OutboxService;
 import com.pharmacy.drugstore.repository.CustomerOrderRepository;
@@ -29,13 +38,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
-import java.math.BigDecimal;
-import java.time.Duration;
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
 
 @Service
 public class CheckoutSagaOrchestrator {
@@ -293,10 +295,13 @@ public class CheckoutSagaOrchestrator {
     @Scheduled(fixedDelay = 1000)
     public void enforceDeadlines() {
         Instant now = Instant.now();
-        for (CheckoutSaga listed : sagas.findByStatusIn(List.of("RUNNING"))) {
+        List<String> orderNumbers = sagas.findByStatusIn(List.of("RUNNING")).stream()
+                .map(CheckoutSaga::getOrderNumber)
+                .toList();
+        StructuredFanout.each(orderNumbers.stream().map(orderNumber -> (Runnable) () -> {
             try {
                 tx.execute(status -> {
-                    CheckoutSaga saga = sagas.lockByOrderNumber(listed.getOrderNumber()).orElse(null);
+                    CheckoutSaga saga = sagas.lockByOrderNumber(orderNumber).orElse(null);
                     if (saga == null || !"RUNNING".equals(saga.getStatus()) || saga.isCompensated()) {
                         return null;
                     }
@@ -323,18 +328,22 @@ public class CheckoutSagaOrchestrator {
                     return null;
                 });
             } catch (Exception ex) {
-                log.error("Checkout deadline check failed orderNumber={}", listed.getOrderNumber(), ex);
+                log.error("Checkout deadline check failed orderNumber={}", orderNumber, ex);
             }
-        }
+        }).toList());
     }
 
     @Scheduled(fixedDelay = 20000)
     public void recoverStuck() {
         Instant cutoff = Instant.now().minus(45, ChronoUnit.SECONDS);
-        for (CheckoutSaga listed : sagas.findByStatusInAndUpdatedAtBefore(List.of("RUNNING", "COMPENSATING"), cutoff)) {
+        List<String> orderNumbers = sagas.findByStatusInAndUpdatedAtBefore(
+                List.of("RUNNING", "COMPENSATING"), cutoff).stream()
+                .map(CheckoutSaga::getOrderNumber)
+                .toList();
+        StructuredFanout.each(orderNumbers.stream().map(orderNumber -> (Runnable) () -> {
             try {
                 tx.execute(status -> {
-                    CheckoutSaga saga = sagas.findByOrderNumber(listed.getOrderNumber()).orElse(null);
+                    CheckoutSaga saga = sagas.findByOrderNumber(orderNumber).orElse(null);
                     if (saga == null || saga.isCompensated() || "COMPENSATED".equals(saga.getStatus())
                             || "COMPLETED".equals(saga.getStatus())) {
                         return null;
@@ -352,9 +361,9 @@ public class CheckoutSagaOrchestrator {
                     return null;
                 });
             } catch (Exception ex) {
-                log.error("Checkout saga recovery failed orderNumber={}", listed.getOrderNumber(), ex);
+                log.error("Checkout saga recovery failed orderNumber={}", orderNumber, ex);
             }
-        }
+        }).toList());
     }
 
     private void republish(CheckoutSaga saga) {

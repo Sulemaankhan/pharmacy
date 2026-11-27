@@ -16,8 +16,10 @@ public class PaymentGatewayClient {
     public static final String UNAVAILABLE = "Payment gateway is unavailable. Please try again.";
     private final RestClient rest;
 
-    public PaymentGatewayClient(@Value("${app.gateway-service.base-url:http://localhost:8086}") String baseUrl) {
-        this.rest = OutboundRest.client(baseUrl);
+    public PaymentGatewayClient(
+            RestClient.Builder builder,
+            @Value("${app.gateway-service.base-url:http://localhost:8086}") String baseUrl) {
+        this.rest = OutboundRest.client(builder, baseUrl);
     }
 
     @CircuitBreaker(name = "paymentGateway", fallbackMethod = "refundFallback")
@@ -103,7 +105,7 @@ public class PaymentGatewayClient {
         if (OutboundRest.open(ex)) {
             log.warn("Payment gateway {} skipped, circuit open key={}", action, key);
         } else {
-            log.warn("Payment gateway {} failed key={} reason={}", action, key, OutboundRest.reason(ex));
+            log.warn("Payment gateway {} failed key={} reason={}", action, key, OutboundRest.reason(ex), ex);
         }
         return failed(UNAVAILABLE);
     }

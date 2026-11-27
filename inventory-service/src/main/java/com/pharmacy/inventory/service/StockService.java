@@ -1,5 +1,11 @@
 package com.pharmacy.inventory.service;
 
+
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import com.pharmacy.inventory.entity.Product;
 import com.pharmacy.inventory.entity.StockReservation;
 import com.pharmacy.inventory.event.DomainEvent;
@@ -13,11 +19,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 @Service
 public class StockService {

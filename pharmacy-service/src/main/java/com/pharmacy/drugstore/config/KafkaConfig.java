@@ -1,5 +1,8 @@
 package com.pharmacy.drugstore.config;
 
+
+import java.util.HashMap;
+import java.util.Map;
 import com.pharmacy.drugstore.kafka.DomainEvent;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
@@ -22,8 +25,6 @@ import org.springframework.kafka.listener.ContainerProperties;
 import org.springframework.kafka.listener.DefaultErrorHandler;
 import org.springframework.kafka.support.serializer.JsonDeserializer;
 import org.springframework.kafka.support.serializer.JsonSerializer;
-import java.util.HashMap;
-import java.util.Map;
 
 @Configuration
 public class KafkaConfig {

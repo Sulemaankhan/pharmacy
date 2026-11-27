@@ -1,7 +1,8 @@
 package com.pharmacy.drugstore.entity;
 
-import jakarta.persistence.*;
+
 import java.math.BigDecimal;
+import jakarta.persistence.*;
 
 @Entity
 @Table(name = "ledger_accounts")

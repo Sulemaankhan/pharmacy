@@ -2,6 +2,8 @@ package com.pharmacy.drugstore.dto;
 
 import java.util.List;
 
+
+
 public record HealthStatusResponse(
         Integer overallScore,
         String overallStatus,

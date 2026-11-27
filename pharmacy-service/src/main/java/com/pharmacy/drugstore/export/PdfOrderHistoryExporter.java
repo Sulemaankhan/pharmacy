@@ -1,5 +1,10 @@
 package com.pharmacy.drugstore.export;
 
+
+import java.io.ByteArrayOutputStream;
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.List;
 import com.lowagie.text.Document;
 import com.lowagie.text.Element;
 import com.lowagie.text.Font;
@@ -14,13 +19,9 @@ import com.pharmacy.drugstore.entity.OrderItem;
 import com.pharmacy.drugstore.entity.User;
 import org.springframework.stereotype.Component;
 import java.awt.Color;
-import java.io.ByteArrayOutputStream;
-import java.math.BigDecimal;
-import java.time.Instant;
-import java.util.List;
 
 @Component
-public class PdfOrderHistoryExporter extends AbstractOrderHistoryExporter {
+public final class PdfOrderHistoryExporter extends AbstractOrderHistoryExporter {
     private static final Color BLUE = new Color(13, 78, 192);
     private static final Color HEADER_BG = new Color(232, 241, 255);
     private static final Color MUTED = new Color(100, 116, 139);

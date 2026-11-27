@@ -5,6 +5,10 @@ import { formatMoney } from '../money'
 import { Icon, LogoMark, paths } from '../icons'
 import { LAB_PANELS, isShopCategory } from '../labReports'
 
+function prefetch(loader) {
+  loader()
+}
+
 export default function Header() {
   const { user, cartCount, cartTotal, wishCount, query, setQuery, logout, categories } = useStore()
   const [open, setOpen] = useState(false)
@@ -84,12 +88,12 @@ export default function Header() {
             </Link>
             {user && (
               <>
-                <Link className="icon-btn" to="/wishlist">
+                <Link className="icon-btn" to="/wishlist" onMouseEnter={() => prefetch(() => import('../pages/Wishlist'))}>
                   <div className="icon-glyph"><Icon d={paths.heart} /></div>
                   Wishlist
                   <span className="badge">{wishCount}</span>
                 </Link>
-                <Link className="icon-btn" to="/cart">
+                <Link className="icon-btn" to="/cart" onMouseEnter={() => prefetch(() => import('../pages/Cart'))}>
                   <div className="icon-glyph"><Icon d={paths.bag} /></div>
                   <div className="cart-total">{formatMoney(cartTotal)}</div>
                   <span className="badge">{cartCount}</span>
@@ -99,7 +103,7 @@ export default function Header() {
             {user ? (
               <button type="button" className="btn logout-btn" onClick={handleLogout}>Logout</button>
             ) : (
-              <Link className="btn logout-btn" to="/auth">Sign In</Link>
+              <Link className="btn logout-btn" to="/auth" onMouseEnter={() => prefetch(() => import('../pages/Auth'))}>Sign In</Link>
             )}
           </div>
         </div>
@@ -113,7 +117,7 @@ export default function Header() {
             </button>
             {catsOpen && (
               <div className="cat-drop">
-                <Link to="/shop" onClick={() => setCatsOpen(false)}>All products</Link>
+                <Link to="/shop" onClick={() => setCatsOpen(false)} onMouseEnter={() => prefetch(() => import('../pages/Shop'))}>All products</Link>
                 {shopCategories.map((c) => (
                   <Link key={c.id} to={`/shop?category=${c.id}`} onClick={() => setCatsOpen(false)}>{c.name}</Link>
                 ))}
@@ -122,11 +126,14 @@ export default function Header() {
           </div>
           <div className="nav-links">
             <NavLink to="/" end>Home</NavLink>
-            <NavLink to="/shop">Shop</NavLink>
+            <NavLink to="/shop" onMouseEnter={() => prefetch(() => import('../pages/Shop'))}>Shop</NavLink>
             <div className="nav-drop-wrap" onMouseLeave={() => setLabsOpen(false)}>
               <NavLink
                 to="/lab-reports"
-                onMouseEnter={() => setLabsOpen(true)}
+                onMouseEnter={() => {
+                  setLabsOpen(true)
+                  prefetch(() => import('../pages/LabReportsHome'))
+                }}
                 className={() => (labsSection ? 'active' : undefined)}
               >
                 Lab Reports
@@ -152,7 +159,10 @@ export default function Header() {
               <div className="nav-drop-wrap" onMouseLeave={() => setProfileOpen(false)}>
                 <NavLink
                   to="/profile"
-                  onMouseEnter={() => setProfileOpen(true)}
+                  onMouseEnter={() => {
+                    setProfileOpen(true)
+                    prefetch(() => import('../pages/Profile'))
+                  }}
                   className={() => (profileSection ? 'active' : undefined)}
                 >
                   Profile

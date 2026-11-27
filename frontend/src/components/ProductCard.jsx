@@ -1,10 +1,11 @@
+import { memo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useStore } from '../store'
-import { useState } from 'react'
 import { formatMoney } from '../money'
 import { Icon, paths } from '../icons'
+import LazyImage from './LazyImage'
 
-export default function ProductCard({ product }) {
+function ProductCard({ product }) {
   const { addToCart, toggleWish, isWished, user } = useStore()
   const [msg, setMsg] = useState('')
   if (!product) return null
@@ -21,7 +22,7 @@ export default function ProductCard({ product }) {
       {off > 0 && <span className="sale-tag">-{off}%</span>}
       {product.labPanel && <span className="lab-tag">Lab test</span>}
       <Link to={`/product/${product.id}`} className="img-wrap">
-        <img src={product.imageUrl} alt={product.name} />
+        <LazyImage src={product.imageUrl} alt={product.name} />
       </Link>
       <div className="brand">{product.brand}</div>
       <h3><Link to={`/product/${product.id}`}>{product.name}</Link></h3>
@@ -46,3 +47,5 @@ export default function ProductCard({ product }) {
     </article>
   )
 }
+
+export default memo(ProductCard)

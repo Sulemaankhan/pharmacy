@@ -1,15 +1,17 @@
 package com.pharmacy.drugstore.export;
 
-import com.pharmacy.drugstore.entity.CustomerOrder;
-import com.pharmacy.drugstore.entity.OrderItem;
-import com.pharmacy.drugstore.entity.User;
+
 import java.math.BigDecimal;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.stream.Collectors;
+import com.pharmacy.drugstore.entity.CustomerOrder;
+import com.pharmacy.drugstore.entity.OrderItem;
+import com.pharmacy.drugstore.entity.User;
 
-public abstract class AbstractOrderHistoryExporter implements OrderHistoryExporter {
+public abstract sealed class AbstractOrderHistoryExporter implements OrderHistoryExporter
+        permits ExcelOrderHistoryExporter, PdfOrderHistoryExporter {
     protected static final ZoneId IST = ZoneId.of("Asia/Kolkata");
     protected static final DateTimeFormatter DATE_TIME =
             DateTimeFormatter.ofPattern("dd MMM yyyy, hh:mm a").withZone(IST);

@@ -391,6 +391,7 @@ img { max-width: 100%; display: block; }
 .toast-ok { color: var(--green-dark); font-size: 13px; font-weight: 800; }
 
 .page { padding: 28px 0 90px; }
+.page-fallback { min-height: 40vh; display: grid; place-items: center; }
 .page-title { margin-bottom: 6px; font-size: 32px; }
 .crumb { color: var(--muted); font-size: 14px; margin-bottom: 18px; font-weight: 600; }
 .muted { color: var(--muted); }

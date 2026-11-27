@@ -3,7 +3,10 @@ import { Link } from 'react-router-dom'
 import { useStore } from '../store'
 import { downloadFile, api } from '../api'
 import { formatMoney } from '../money'
+import EmptyState from '../components/EmptyState'
+import LazyImage from '../components/LazyImage'
 import ProfileTabs from '../components/ProfileTabs'
+import RequireSignIn from '../components/RequireSignIn'
 
 function formatDate(iso) {
   if (!iso) return ''
@@ -61,19 +64,8 @@ export default function Orders() {
     }
   }
 
-  if (!user) {
-    return (
-      <div className="container page">
-        <div className="empty">
-          <h2>Sign in to see orders</h2>
-          <p className="muted">Your purchase history is saved to your account.</p>
-          <Link className="btn" to="/auth" style={{ marginTop: 16 }}>Sign in</Link>
-        </div>
-      </div>
-    )
-  }
-
   return (
+    <RequireSignIn user={user} title="Sign in to see orders" message="Your purchase history is saved to your account.">
     <div className="container page">
       <p className="crumb">Home / Profile / Orders</p>
       <div className="page-head">
@@ -103,10 +95,7 @@ export default function Orders() {
       {error && <p className="error">{error}</p>}
       {emailMsg && <p className="toast-ok" style={{ marginBottom: 12 }}>{emailMsg}</p>}
       {list.length === 0 && (
-        <div className="empty">
-          <p>No orders in this view yet.</p>
-          <Link className="btn" to="/shop" style={{ marginTop: 16 }}>Start shopping</Link>
-        </div>
+        <EmptyState message="No orders in this view yet." actionTo="/shop" actionLabel="Start shopping" />
       )}
 
       <div className="order-list">
@@ -121,7 +110,7 @@ export default function Orders() {
             </div>
             <div className="order-thumbs">
               {(order.items || []).slice(0, 4).map((item) => (
-                <img key={item.id || item.productName} src={item.imageUrl} alt={item.productName} />
+                <LazyImage key={item.id || item.productName} src={item.imageUrl} alt={item.productName} />
               ))}
               <span className="muted">{(order.items || []).length} item{(order.items || []).length === 1 ? '' : 's'}</span>
             </div>
@@ -148,5 +137,6 @@ export default function Orders() {
         ))}
       </div>
     </div>
+    </RequireSignIn>
   )
 }

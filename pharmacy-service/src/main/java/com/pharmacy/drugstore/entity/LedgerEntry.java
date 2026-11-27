@@ -1,9 +1,10 @@
 package com.pharmacy.drugstore.entity;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import jakarta.persistence.*;
+
 import java.math.BigDecimal;
 import java.time.Instant;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import jakarta.persistence.*;
 
 @Entity
 @Table(name = "ledger_entries")

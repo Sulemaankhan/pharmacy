@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
-import ProductCard from '../components/ProductCard'
+import ProductGrid from '../components/ProductGrid'
+import CatalogStatus from '../components/CatalogStatus'
+import LazyImage from '../components/LazyImage'
 import { useStore } from '../store'
 import { Link } from 'react-router-dom'
 import { Icon, paths } from '../icons'
@@ -39,10 +41,6 @@ export default function Home() {
   const ends = deals[0]?.dealEndsAt || new Date(Date.now() + 86400000 * 2).toISOString()
   const t = useCountdown(ends)
 
-  useEffect(() => {
-    if (products.length === 0) refreshCatalog().catch(() => {})
-  }, [])
-
   return (
     <>
       <section className="hero">
@@ -62,7 +60,7 @@ export default function Home() {
             </div>
           </div>
           <div className="hero-art">
-            <img src="https://images.unsplash.com/photo-1587854692152-cbe660dbde88?w=900" alt="Pharmacy medicines and care" />
+            <LazyImage eager src="https://images.unsplash.com/photo-1587854692152-cbe660dbde88?w=900" alt="Pharmacy medicines and care" />
             <div className="hero-float">
               <small>Live cart ready</small>
               <b>From ₹89</b>
@@ -139,12 +137,11 @@ export default function Home() {
 
       {(catalogError || (loadingCatalog && products.length === 0)) && (
         <section className="container section">
-          {loadingCatalog && <p className="muted">Loading products...</p>}
-          {catalogError && (
-            <p className="error">
-              {catalogError} <button className="link-btn" onClick={() => refreshCatalog()}>Retry</button>
-            </p>
-          )}
+          <CatalogStatus
+            loading={loadingCatalog && products.length === 0}
+            error={catalogError}
+            onRetry={() => refreshCatalog({ force: true })}
+          />
         </section>
       )}
 
@@ -160,16 +157,12 @@ export default function Home() {
             </div>
           </div>
         </div>
-        <div className="grid">
-          {deals.map((p) => <ProductCard key={p.id} product={p} />)}
-        </div>
+        <ProductGrid products={deals} />
       </section>
 
       <section className="container section">
         <div className="section-head"><h2>Featured Products</h2><Link className="link-btn" to="/shop">Shop all</Link></div>
-        <div className="grid">
-          {featured.map((p) => <ProductCard key={p.id} product={p} />)}
-        </div>
+        <ProductGrid products={featured} />
       </section>
     </>
   )

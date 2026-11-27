@@ -1,11 +1,12 @@
 package com.pharmacy.drugstore.repository;
 
+
+import java.util.List;
+import java.util.Optional;
 import com.pharmacy.drugstore.entity.WishlistItem;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import java.util.List;
-import java.util.Optional;
 
 public interface WishlistItemRepository extends JpaRepository<WishlistItem, Long> {
     @Query("SELECT w FROM WishlistItem w JOIN FETCH w.product p LEFT JOIN FETCH p.category JOIN FETCH w.user WHERE w.user.id = :userId")

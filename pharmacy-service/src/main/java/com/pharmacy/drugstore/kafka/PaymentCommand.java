@@ -2,6 +2,8 @@ package com.pharmacy.drugstore.kafka;
 
 import java.math.BigDecimal;
 
+
+
 public record PaymentCommand(
         String correlationId,
         String orderNumber,

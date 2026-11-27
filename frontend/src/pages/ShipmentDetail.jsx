@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useStore } from '../store'
+import RequireSignIn from '../components/RequireSignIn'
 import ShipmentTracker from '../components/ShipmentTracker'
 import { connectShipmentSocket, fetchShipmentByTracking } from '../shipments'
 
@@ -40,14 +41,7 @@ export default function ShipmentDetail() {
   }, [user?.userId, trackingNumber])
 
   if (!user) {
-    return (
-      <div className="container page">
-        <div className="empty">
-          <p>Please sign in to track this shipment.</p>
-          <Link className="btn" to="/auth" style={{ marginTop: 16 }}>Sign in</Link>
-        </div>
-      </div>
-    )
+    return <RequireSignIn user={user} message="Please sign in to track this shipment." />
   }
 
   return (

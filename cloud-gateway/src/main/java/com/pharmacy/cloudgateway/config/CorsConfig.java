@@ -1,5 +1,7 @@
 package com.pharmacy.cloudgateway.config;
 
+
+import java.util.List;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
@@ -14,7 +16,6 @@ import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.WebFilter;
 import org.springframework.web.server.WebFilterChain;
 import reactor.core.publisher.Mono;
-import java.util.List;
 
 @Configuration
 public class CorsConfig {

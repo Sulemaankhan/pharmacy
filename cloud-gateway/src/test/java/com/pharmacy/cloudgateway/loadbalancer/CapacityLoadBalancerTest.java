@@ -1,5 +1,8 @@
 package com.pharmacy.cloudgateway.loadbalancer;
 
+
+import java.util.List;
+import java.util.Map;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.ObjectProvider;
@@ -11,8 +14,6 @@ import org.springframework.cloud.client.loadbalancer.Request;
 import org.springframework.cloud.client.loadbalancer.Response;
 import org.springframework.cloud.loadbalancer.core.ServiceInstanceListSupplier;
 import reactor.core.publisher.Flux;
-import java.util.List;
-import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class CapacityLoadBalancerTest {

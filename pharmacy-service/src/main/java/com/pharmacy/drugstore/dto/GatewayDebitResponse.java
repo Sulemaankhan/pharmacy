@@ -2,6 +2,8 @@ package com.pharmacy.drugstore.dto;
 
 import java.math.BigDecimal;
 
+
+
 public record GatewayDebitResponse(
         boolean success,
         String message,

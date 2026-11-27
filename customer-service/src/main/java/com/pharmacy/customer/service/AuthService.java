@@ -1,5 +1,14 @@
 package com.pharmacy.customer.service;
 
+
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.HexFormat;
+import java.util.Locale;
+import java.util.Map;
+import java.util.UUID;
 import com.pharmacy.customer.dto.AuthRequest;
 import com.pharmacy.customer.dto.AuthResponse;
 import com.pharmacy.customer.dto.CustomerProfile;
@@ -21,14 +30,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
-import java.util.HexFormat;
-import java.util.Locale;
-import java.util.Map;
-import java.util.UUID;
 
 @Service
 public class AuthService {

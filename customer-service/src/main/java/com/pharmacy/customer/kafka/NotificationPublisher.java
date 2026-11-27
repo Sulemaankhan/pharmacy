@@ -1,12 +1,13 @@
 package com.pharmacy.customer.kafka;
 
+
+import java.util.List;
+import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
-import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 @Component
 public class NotificationPublisher {

@@ -1,11 +1,12 @@
 package com.pharmacy.payment.strategy;
 
+
+import java.util.UUID;
 import com.pharmacy.payment.payment.PaymentMode;
 import org.springframework.stereotype.Component;
-import java.util.UUID;
 
 @Component
-public class UpiPaymentStrategy implements PaymentStrategy {
+public final class UpiPaymentStrategy implements PaymentStrategy {
     @Override
     public PaymentMode mode() {
         return PaymentMode.UPI;

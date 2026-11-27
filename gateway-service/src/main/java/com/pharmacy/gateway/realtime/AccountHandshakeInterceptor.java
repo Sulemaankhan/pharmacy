@@ -1,5 +1,7 @@
 package com.pharmacy.gateway.realtime;
 
+
+import java.util.Map;
 import com.pharmacy.gateway.security.JwtService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -9,7 +11,6 @@ import org.springframework.http.server.ServletServerHttpRequest;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketHandler;
 import org.springframework.web.socket.server.HandshakeInterceptor;
-import java.util.Map;
 
 @Component
 public class AccountHandshakeInterceptor implements HandshakeInterceptor {
